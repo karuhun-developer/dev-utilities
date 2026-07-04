@@ -1,0 +1,177 @@
+---
+import Layout from '../layouts/Layout.astro';
+---
+
+<Layout 
+	title="Grayscale Image Converter"
+	description="Convert your colorful images to black and white (grayscale) instantly in your browser without any server uploads."
+	keywords="grayscale image, black and white photo, make image grayscale, online image filter, client side image processing"
+>
+	<div class="max-w-6xl" x-data="grayscaleApp()">
+		<h1 class="text-2xl font-bold text-zinc-900 mb-2">Grayscale Image Converter</h1>
+		<p class="text-zinc-600 mb-8">Quickly apply a classic black-and-white (grayscale) filter to your photos. Securely processed within your browser.</p>
+
+		<div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+			
+			<!-- Input Section -->
+			<div class="space-y-6">
+				<div class="space-y-4">
+					<label class="block text-sm font-medium text-zinc-700">Upload Original Image</label>
+					<div class="mt-1 flex justify-center px-6 pt-5 pb-6 border-2 border-zinc-300 border-dashed rounded-lg hover:bg-zinc-50 transition-colors relative">
+						<div class="space-y-1 text-center">
+							<svg class="mx-auto h-12 w-12 text-zinc-400" stroke="currentColor" fill="none" viewBox="0 0 48 48" aria-hidden="true">
+								<path d="M28 8H12a4 4 0 00-4 4v20m32-12v8m0 0v8a4 4 0 01-4 4H12a4 4 0 01-4-4v-4m32-4l-3.172-3.172a4 4 0 00-5.656 0L28 28M8 32l9.172-9.172a4 4 0 015.656 0L28 28m0 0l4 4m4-24h8m-4-4v8m-12 4h.02" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+							</svg>
+							<div class="flex text-sm text-zinc-600 justify-center">
+								<label for="file-upload" class="relative cursor-pointer bg-white rounded-md font-medium text-blue-600 hover:text-blue-500 focus-within:outline-none focus-within:ring-2 focus-within:ring-offset-2 focus-within:ring-blue-500">
+									<span>Upload a file</span>
+									<input id="file-upload" type="file" accept="image/*" class="sr-only" @change="handleFileUpload">
+								</label>
+								<p class="pl-1">or drag and drop</p>
+							</div>
+							<p class="text-xs text-zinc-500">PNG, JPG, WEBP, GIF up to 10MB</p>
+						</div>
+					</div>
+				</div>
+
+				<div x-show="originalImageSrc" style="display: none;" class="space-y-4 bg-zinc-50 p-4 border border-zinc-200 rounded-lg">
+					<div class="flex items-center justify-between">
+						<span class="text-sm font-medium text-zinc-700">Original Preview:</span>
+					</div>
+					<div class="flex justify-center bg-white border border-zinc-200 rounded p-2">
+						<img :src="originalImageSrc" class="max-h-64 object-contain" alt="Original Image Preview">
+					</div>
+					
+					<div class="pt-2">
+						<button @click="convertToGrayscale" :disabled="!originalImageSrc || isProcessing" :class="(!originalImageSrc || isProcessing) ? 'opacity-50 cursor-not-allowed' : 'hover:bg-zinc-800'" class="w-full bg-zinc-900 text-white px-4 py-2 rounded-md text-sm font-medium transition-colors flex justify-center items-center">
+							<span x-show="!isProcessing">Apply Grayscale Filter</span>
+							<span x-show="isProcessing" class="flex items-center" style="display: none;">
+								<svg class="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+								Applying...
+							</span>
+						</button>
+					</div>
+				</div>
+			</div>
+
+			<!-- Output Settings & Preview -->
+			<div class="space-y-6">
+				<div x-show="!resultImageSrc" class="bg-zinc-50 p-6 border border-zinc-200 rounded-lg flex items-center justify-center min-h-[400px]">
+					<div class="text-sm text-zinc-400">Result will appear here after applying the filter.</div>
+				</div>
+
+				<div x-show="resultImageSrc" style="display: none;" class="space-y-4 bg-zinc-50 p-4 border border-zinc-200 rounded-lg">
+					<div class="flex items-center justify-between">
+						<span class="text-sm font-medium text-zinc-700">Grayscale Result:</span>
+						<a :href="resultImageSrc" :download="downloadFilename" class="px-3 py-1.5 bg-blue-600 text-white rounded text-xs font-medium hover:bg-blue-700 transition-colors">
+							Download File
+						</a>
+					</div>
+					<div class="flex justify-center bg-white border border-zinc-200 rounded p-2 relative">
+						<img :src="resultImageSrc" class="max-h-[400px] object-contain" alt="Grayscale Result">
+					</div>
+				</div>
+			</div>
+		</div>
+
+		<!-- Hidden Canvas for processing -->
+		<canvas id="grayscaleCanvas" style="display: none;"></canvas>
+	</div>
+
+	<script is:inline>
+		document.addEventListener('alpine:init', () => {
+			Alpine.data('grayscaleApp', () => ({
+				originalImageSrc: '',
+				originalFilename: 'image',
+				originalMimeType: 'image/jpeg',
+				
+				resultImageSrc: '',
+				isProcessing: false,
+
+				get downloadFilename() {
+					const baseName = this.originalFilename.replace(/\.[^/.]+$/, "");
+					let ext = 'jpg';
+					if (this.originalMimeType === 'image/png') ext = 'png';
+					if (this.originalMimeType === 'image/webp') ext = 'webp';
+					return `${baseName}-grayscale.${ext}`;
+				},
+
+				handleFileUpload(e) {
+					const file = e.target.files[0];
+					if (!file) return;
+
+					this.originalFilename = file.name;
+					this.originalMimeType = file.type || 'image/jpeg';
+					
+					const reader = new FileReader();
+					reader.onload = (event) => {
+						this.originalImageSrc = event.target.result;
+						this.resultImageSrc = ''; // clear previous result
+					};
+					reader.readAsDataURL(file);
+				},
+
+				convertToGrayscale() {
+					if (!this.originalImageSrc || this.isProcessing) return;
+					
+					this.isProcessing = true;
+					this.resultImageSrc = '';
+
+					// Small timeout to allow UI to update to loading state
+					setTimeout(() => {
+						const img = new Image();
+						img.onload = () => {
+							try {
+								const canvas = document.getElementById('grayscaleCanvas');
+								const ctx = canvas.getContext('2d');
+								
+								canvas.width = img.width;
+								canvas.height = img.height;
+								
+								// Draw original image
+								ctx.drawImage(img, 0, 0);
+
+								// Get pixel data
+								const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+								const data = imageData.data;
+
+								// Apply grayscale algorithm (Luminance method)
+								for (let i = 0; i < data.length; i += 4) {
+									const r = data[i];
+									const g = data[i + 1];
+									const b = data[i + 2];
+									
+									// Y = 0.299 R + 0.587 G + 0.114 B
+									const luminance = 0.299 * r + 0.587 * g + 0.114 * b;
+									
+									data[i] = luminance;     // Red
+									data[i + 1] = luminance; // Green
+									data[i + 2] = luminance; // Blue
+									// Alpha (data[i + 3]) remains untouched
+								}
+
+								// Put pixel data back
+								ctx.putImageData(imageData, 0, 0);
+
+								// Output as same mime type as original (quality 0.9 if jpeg/webp)
+								const dataUrl = canvas.toDataURL(this.originalMimeType, 0.9);
+								
+								this.resultImageSrc = dataUrl;
+							} catch (e) {
+								console.error("Error applying grayscale:", e);
+								alert("Failed to process image. Make sure the image is not corrupted and isn't too large.");
+							} finally {
+								this.isProcessing = false;
+							}
+						};
+						img.onerror = () => {
+							alert("Error loading image for processing.");
+							this.isProcessing = false;
+						};
+						img.src = this.originalImageSrc;
+					}, 50);
+				}
+			}));
+		});
+	</script>
+</Layout>
