@@ -1,0 +1,115 @@
+---
+import Layout from '../layouts/Layout.astro';
+---
+
+<Layout 
+	title="JSON Formatter & Validator"
+	description="Format, prettify, and validate JSON data online. Fast, secure, and client-side only JSON formatter tool for developers."
+	keywords="json formatter, json validator, prettify json, minify json, format json online, dev tools"
+>
+	<div class="max-w-6xl" x-data="jsonFormatterApp()">
+		<h1 class="text-2xl font-bold text-zinc-900 mb-2">JSON Formatter & Validator</h1>
+		<p class="text-zinc-600 mb-8">Validate, format (prettify), or minify your JSON data securely in the browser.</p>
+
+		<div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+			<!-- Input Section -->
+			<div class="flex flex-col h-full">
+				<div class="flex justify-between items-center mb-2">
+					<label for="input" class="text-sm font-medium text-zinc-700">Input JSON</label>
+					<div class="space-x-2">
+						<button @click="format()" class="px-3 py-1.5 bg-zinc-900 text-white rounded text-xs font-medium hover:bg-zinc-800 transition-colors">Format / Prettify</button>
+						<button @click="minify()" class="px-3 py-1.5 bg-zinc-200 text-zinc-800 rounded text-xs font-medium hover:bg-zinc-300 transition-colors">Minify</button>
+						<button @click="clear()" class="px-3 py-1.5 border border-zinc-300 text-zinc-600 rounded text-xs font-medium hover:bg-zinc-50 transition-colors">Clear</button>
+					</div>
+				</div>
+				<textarea id="input" x-model="inputText" @input="validateLive" class="w-full flex-1 min-h-[400px] px-4 py-3 bg-zinc-50 border border-zinc-300 rounded-lg shadow-sm font-mono text-sm focus:outline-none focus:ring-1 focus:ring-zinc-500 focus:border-zinc-500 resize-y" placeholder='{"paste": "your json here"}'></textarea>
+				
+				<div x-show="errorMessage" class="mt-4 p-3 rounded-md text-sm font-medium bg-red-50 border border-red-200 text-red-700 break-words" x-text="errorMessage" style="display: none;"></div>
+				<div x-show="isValid && inputText.trim() !== ''" class="mt-4 p-3 rounded-md text-sm font-medium bg-green-50 border border-green-200 text-green-700" style="display: none;">✅ Valid JSON</div>
+			</div>
+
+			<!-- Output Section -->
+			<div class="flex flex-col h-full mt-8 lg:mt-0">
+				<div class="flex justify-between items-center mb-2">
+					<label for="output" class="text-sm font-medium text-zinc-700">Output JSON</label>
+					<button @click="copy()" class="px-3 py-1.5 border border-zinc-300 text-zinc-600 rounded text-xs font-medium hover:bg-zinc-50 transition-colors" x-text="copied ? 'Copied!' : 'Copy to Clipboard'">Copy to Clipboard</button>
+				</div>
+				<textarea id="output" x-model="outputText" readonly class="w-full flex-1 min-h-[400px] px-4 py-3 bg-zinc-100 border border-zinc-300 rounded-lg shadow-sm font-mono text-sm focus:outline-none resize-y" placeholder="Result will appear here..."></textarea>
+			</div>
+		</div>
+	</div>
+
+	<script is:inline>
+		document.addEventListener('alpine:init', () => {
+			Alpine.data('jsonFormatterApp', () => ({
+				inputText: '',
+				outputText: '',
+				errorMessage: '',
+				isValid: false,
+				copied: false,
+
+				validateLive() {
+					if (!this.inputText.trim()) {
+						this.errorMessage = '';
+						this.isValid = false;
+						return;
+					}
+
+					try {
+						JSON.parse(this.inputText);
+						this.isValid = true;
+						this.errorMessage = '';
+					} catch (e) {
+						this.isValid = false;
+						this.errorMessage = e.message || 'Invalid JSON';
+					}
+				},
+
+				format() {
+					if (!this.inputText.trim()) return;
+					
+					try {
+						const parsed = JSON.parse(this.inputText);
+						this.outputText = JSON.stringify(parsed, null, 2);
+						this.isValid = true;
+						this.errorMessage = '';
+					} catch (e) {
+						this.isValid = false;
+						this.errorMessage = e.message || 'Invalid JSON';
+						this.outputText = '';
+					}
+				},
+
+				minify() {
+					if (!this.inputText.trim()) return;
+					
+					try {
+						const parsed = JSON.parse(this.inputText);
+						this.outputText = JSON.stringify(parsed);
+						this.isValid = true;
+						this.errorMessage = '';
+					} catch (e) {
+						this.isValid = false;
+						this.errorMessage = e.message || 'Invalid JSON';
+						this.outputText = '';
+					}
+				},
+
+				clear() {
+					this.inputText = '';
+					this.outputText = '';
+					this.errorMessage = '';
+					this.isValid = false;
+				},
+
+				copy() {
+					if (this.outputText) {
+						navigator.clipboard.writeText(this.outputText);
+						this.copied = true;
+						setTimeout(() => { this.copied = false; }, 2000);
+					}
+				}
+			}));
+		});
+	</script>
+</Layout>
