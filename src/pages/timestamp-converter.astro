@@ -1,0 +1,157 @@
+---
+import Layout from '../layouts/Layout.astro';
+---
+
+<Layout 
+	title="Timestamp Converter"
+	description="Convert Unix timestamps to readable dates and times. View your local time and UTC time instantly. Fast, secure, and client-side only."
+	keywords="timestamp converter, unix epoch, epoch to date, epoch converter, unix time converter, utc to local time"
+>
+	<div class="max-w-4xl" x-data="timestampApp()">
+		<h1 class="text-2xl font-bold text-zinc-900 mb-2">Timestamp Converter</h1>
+		<p class="text-zinc-600 mb-8">Convert Unix epoch timestamps to human-readable text in both Local Time and UTC.</p>
+
+		<div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+			
+			<!-- Input Section -->
+			<div class="space-y-6">
+				<div>
+					<label for="timestamp" class="block text-sm font-medium text-zinc-700 mb-2">Unix Timestamp</label>
+					<div class="flex space-x-2">
+						<input type="number" id="timestamp" x-model="timestampInput" @input="convertTime" class="flex-1 px-3 py-2 border border-zinc-300 rounded-md shadow-sm focus:outline-none focus:ring-zinc-500 focus:border-zinc-500 sm:text-sm font-mono" placeholder="e.g. 1672531199">
+						<button @click="setCurrentTime()" class="px-3 py-2 bg-zinc-900 text-white rounded-md text-sm font-medium hover:bg-zinc-800 transition-colors whitespace-nowrap">
+							Current Time
+						</button>
+					</div>
+				</div>
+
+				<div>
+					<label class="block text-sm font-medium text-zinc-700 mb-2">Format</label>
+					<div class="flex items-center space-x-4">
+						<label class="flex items-center space-x-2">
+							<input type="radio" x-model="format" value="seconds" @change="convertTime" class="text-zinc-600 focus:ring-zinc-500">
+							<span class="text-sm text-zinc-700">Seconds</span>
+						</label>
+						<label class="flex items-center space-x-2">
+							<input type="radio" x-model="format" value="milliseconds" @change="convertTime" class="text-zinc-600 focus:ring-zinc-500">
+							<span class="text-sm text-zinc-700">Milliseconds</span>
+						</label>
+					</div>
+				</div>
+
+				<div x-show="errorMessage" class="p-3 rounded-md text-sm font-medium bg-red-50 border border-red-200 text-red-700" x-text="errorMessage" style="display: none;"></div>
+			</div>
+
+			<!-- Output Section -->
+			<div class="space-y-4">
+				<div class="bg-zinc-50 p-4 border border-zinc-200 rounded-lg">
+					<div class="flex justify-between items-center mb-1">
+						<span class="text-xs font-bold text-zinc-500 uppercase tracking-wider">Local Time (<span x-text="timezone"></span>)</span>
+						<button @click="copy(localTime, 'local')" class="text-zinc-400 hover:text-zinc-800 text-xs font-medium" x-text="copied.local ? 'Copied!' : 'Copy'">Copy</button>
+					</div>
+					<div class="text-lg font-mono text-zinc-900 break-all" x-text="localTime || '---'"></div>
+				</div>
+
+				<div class="bg-zinc-50 p-4 border border-zinc-200 rounded-lg">
+					<div class="flex justify-between items-center mb-1">
+						<span class="text-xs font-bold text-zinc-500 uppercase tracking-wider">UTC Time</span>
+						<button @click="copy(utcTime, 'utc')" class="text-zinc-400 hover:text-zinc-800 text-xs font-medium" x-text="copied.utc ? 'Copied!' : 'Copy'">Copy</button>
+					</div>
+					<div class="text-lg font-mono text-zinc-900 break-all" x-text="utcTime || '---'"></div>
+				</div>
+
+				<div class="bg-zinc-50 p-4 border border-zinc-200 rounded-lg">
+					<div class="flex justify-between items-center mb-1">
+						<span class="text-xs font-bold text-zinc-500 uppercase tracking-wider">ISO 8601</span>
+						<button @click="copy(isoTime, 'iso')" class="text-zinc-400 hover:text-zinc-800 text-xs font-medium" x-text="copied.iso ? 'Copied!' : 'Copy'">Copy</button>
+					</div>
+					<div class="text-sm font-mono text-zinc-900 break-all" x-text="isoTime || '---'"></div>
+				</div>
+			</div>
+		</div>
+	</div>
+
+	<script>
+		import dayjs from 'dayjs';
+		import utc from 'dayjs/plugin/utc';
+		import timezone from 'dayjs/plugin/timezone';
+
+		dayjs.extend(utc);
+		dayjs.extend(timezone);
+
+		document.addEventListener('alpine:init', () => {
+			Alpine.data('timestampApp', () => ({
+				timestampInput: '',
+				format: 'seconds',
+				localTime: '',
+				utcTime: '',
+				isoTime: '',
+				timezone: '',
+				errorMessage: '',
+				copied: {
+					local: false,
+					utc: false,
+					iso: false
+				},
+
+				init() {
+					this.timezone = dayjs.tz.guess() || 'Unknown';
+					this.setCurrentTime();
+				},
+
+				setCurrentTime() {
+					const now = dayjs();
+					this.format = 'seconds';
+					this.timestampInput = now.unix().toString();
+					this.convertTime();
+				},
+
+				convertTime() {
+					this.errorMessage = '';
+					if (!this.timestampInput) {
+						this.localTime = '';
+						this.utcTime = '';
+						this.isoTime = '';
+						return;
+					}
+
+					const num = Number(this.timestampInput);
+					if (isNaN(num)) {
+						this.errorMessage = 'Invalid timestamp number.';
+						this.localTime = '';
+						this.utcTime = '';
+						this.isoTime = '';
+						return;
+					}
+
+					try {
+						// Convert based on format
+						const ms = this.format === 'seconds' ? num * 1000 : num;
+						const date = dayjs(ms);
+
+						if (!date.isValid()) {
+							throw new Error('Invalid Date');
+						}
+
+						this.localTime = date.format('YYYY-MM-DD HH:mm:ss');
+						this.utcTime = date.utc().format('YYYY-MM-DD HH:mm:ss');
+						this.isoTime = date.toISOString();
+					} catch (e) {
+						this.errorMessage = 'Date is out of range or invalid.';
+						this.localTime = '';
+						this.utcTime = '';
+						this.isoTime = '';
+					}
+				},
+
+				copy(text, key) {
+					if (text) {
+						navigator.clipboard.writeText(text);
+						this.copied[key] = true;
+						setTimeout(() => { this.copied[key] = false; }, 2000);
+					}
+				}
+			}));
+		});
+	</script>
+</Layout>
