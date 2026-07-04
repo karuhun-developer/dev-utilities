@@ -1,0 +1,301 @@
+---
+import Layout from '../layouts/Layout.astro';
+---
+
+<Layout
+	title="Text Template Editor"
+	description="Create reusable text templates with dynamic variables. Save multiple templates locally and fill in variables to generate personalized text instantly."
+	keywords="text template editor, template variables, text generator, mail merge, personalized text, template tool"
+>
+	<div class="max-w-5xl" x-data="templateEditorApp()">
+		<h1 class="text-2xl font-bold text-zinc-900 mb-2">Text Template Editor</h1>
+		<p class="text-zinc-600 mb-8">Create templates with <code class="bg-zinc-100 px-1 rounded text-zinc-800">[variable]</code> placeholders, fill in values, and save multiple templates locally.</p>
+
+		<div class="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-10">
+
+			<!-- Left: Editor -->
+			<div class="space-y-5">
+				<div>
+					<label class="block text-sm font-medium text-zinc-700 mb-1">Template Name</label>
+					<input
+						type="text"
+						x-model="currentName"
+						placeholder="e.g. Invitation Letter"
+						class="w-full px-3 py-2 border border-zinc-300 rounded-md text-sm focus:outline-none focus:ring-1 focus:ring-zinc-500"
+					>
+				</div>
+
+				<div>
+					<label class="block text-sm font-medium text-zinc-700 mb-1">Template Text</label>
+					<p class="text-xs text-zinc-400 mb-2">Use <code class="bg-zinc-100 px-1 rounded">[variable_name]</code> as placeholders. Variables are auto-detected as you type.</p>
+					<textarea
+						x-model="currentText"
+						@input="syncVariables()"
+						rows="8"
+						placeholder="Halo [nama], anda diundang ke acara [acara] pada tanggal [tanggal]."
+						class="w-full px-3 py-2 border border-zinc-300 rounded-md text-sm font-mono focus:outline-none focus:ring-1 focus:ring-zinc-500 resize-y"
+					></textarea>
+				</div>
+
+				<!-- Variables -->
+				<div>
+					<div class="flex items-center justify-between mb-2">
+						<label class="block text-sm font-medium text-zinc-700">Variables</label>
+						<button @click="addVariable()" class="text-xs text-blue-600 hover:text-blue-800 font-medium">+ Add Manual</button>
+					</div>
+
+					<div x-show="variables.length === 0" class="text-sm text-zinc-400 italic py-2">
+						No variables yet. Type <code class="bg-zinc-100 px-1 rounded">[variable]</code> in the template above to auto-detect.
+					</div>
+
+					<div class="space-y-2">
+						<template x-for="(v, i) in variables" :key="i">
+							<div class="flex items-center gap-2">
+								<div class="w-1/3">
+									<input
+										type="text"
+										x-model="v.key"
+										@input="syncFromVariables()"
+										placeholder="variable"
+										class="w-full px-2 py-1.5 border border-zinc-300 rounded text-xs font-mono focus:outline-none focus:ring-1 focus:ring-zinc-500 bg-zinc-50"
+									>
+								</div>
+								<span class="text-zinc-400 text-xs">=</span>
+								<div class="flex-1">
+									<input
+										type="text"
+										x-model="v.value"
+										placeholder="value"
+										class="w-full px-2 py-1.5 border border-zinc-300 rounded text-xs focus:outline-none focus:ring-1 focus:ring-zinc-500"
+									>
+								</div>
+								<button @click="removeVariable(i)" class="text-zinc-400 hover:text-red-500 transition-colors flex-shrink-0">
+									<svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+										<path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd" />
+									</svg>
+								</button>
+							</div>
+						</template>
+					</div>
+				</div>
+
+				<!-- Save Button -->
+				<div class="flex items-center gap-3 pt-1">
+					<button
+						@click="saveTemplate()"
+						:disabled="!currentText.trim() || !currentName.trim()"
+						:class="(!currentText.trim() || !currentName.trim()) ? 'opacity-50 cursor-not-allowed' : 'hover:bg-zinc-800'"
+						class="bg-zinc-900 text-white px-5 py-2 rounded-md text-sm font-medium transition-colors"
+					>
+						<span x-text="currentId ? 'Update Template' : 'Save Template'"></span>
+					</button>
+					<button @click="newTemplate()" class="text-sm text-zinc-500 hover:text-zinc-800 transition-colors">Clear / New</button>
+					<span x-show="saveFlash" class="text-sm text-green-600 font-medium" style="display:none;" x-text="saveFlash"></span>
+				</div>
+			</div>
+
+			<!-- Right: Preview -->
+			<div class="space-y-4">
+				<div class="bg-zinc-50 border border-zinc-200 rounded-lg p-5 min-h-[400px]">
+					<div class="flex items-center justify-between mb-3">
+						<span class="text-xs font-bold text-zinc-500 uppercase tracking-wider">Live Preview</span>
+						<button
+							@click="copyPreview()"
+							x-show="renderedText"
+							class="text-xs text-zinc-400 hover:text-zinc-700 font-medium transition-colors"
+							x-text="previewCopied ? 'Copied!' : 'Copy'"
+							style="display:none;"
+						></button>
+					</div>
+					<div
+						x-show="renderedText"
+						class="text-sm text-zinc-800 whitespace-pre-wrap leading-relaxed font-sans"
+						x-text="renderedText"
+						style="display:none;"
+					></div>
+					<div x-show="!renderedText" class="text-sm text-zinc-400 italic">
+						Start typing your template to see the preview here...
+					</div>
+				</div>
+			</div>
+		</div>
+
+		<!-- Saved Templates Table -->
+		<div x-show="templates.length > 0" style="display:none;">
+			<h2 class="text-lg font-semibold text-zinc-900 mb-3">Saved Templates</h2>
+			<div class="border border-zinc-200 rounded-lg overflow-hidden">
+				<table class="w-full text-sm">
+					<thead class="bg-zinc-50 border-b border-zinc-200">
+						<tr>
+							<th class="text-left px-4 py-3 text-xs font-semibold text-zinc-500 uppercase tracking-wider w-1/4">Name</th>
+							<th class="text-left px-4 py-3 text-xs font-semibold text-zinc-500 uppercase tracking-wider">Preview</th>
+							<th class="text-left px-4 py-3 text-xs font-semibold text-zinc-500 uppercase tracking-wider w-28">Variables</th>
+							<th class="px-4 py-3 w-20"></th>
+						</tr>
+					</thead>
+					<tbody class="divide-y divide-zinc-100">
+						<template x-for="t in templates" :key="t.id">
+							<tr
+								@click="loadTemplate(t)"
+								class="hover:bg-zinc-50 cursor-pointer transition-colors"
+								:class="currentId === t.id ? 'bg-blue-50' : ''"
+							>
+								<td class="px-4 py-3 font-medium text-zinc-900">
+									<div class="flex items-center gap-2">
+										<span x-show="currentId === t.id" class="w-1.5 h-1.5 rounded-full bg-blue-500 flex-shrink-0"></span>
+										<span x-text="t.name"></span>
+									</div>
+								</td>
+								<td class="px-4 py-3 text-zinc-500 truncate max-w-xs" x-text="t.text.substring(0, 80) + (t.text.length > 80 ? '...' : '')"></td>
+								<td class="px-4 py-3 text-zinc-500">
+									<span class="text-xs bg-zinc-100 px-2 py-0.5 rounded font-mono" x-text="t.variables.length + ' var' + (t.variables.length !== 1 ? 's' : '')"></span>
+								</td>
+								<td class="px-4 py-3 text-right" @click.stop>
+									<button @click="deleteTemplate(t.id)" class="text-zinc-300 hover:text-red-500 transition-colors">
+										<svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+											<path fill-rule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clip-rule="evenodd" />
+										</svg>
+									</button>
+								</td>
+							</tr>
+						</template>
+					</tbody>
+				</table>
+			</div>
+		</div>
+	</div>
+
+	<script is:inline>
+		document.addEventListener('alpine:init', () => {
+			Alpine.data('templateEditorApp', () => ({
+				currentId: null,
+				currentName: '',
+				currentText: '',
+				variables: [],
+				templates: [],
+				saveFlash: '',
+				previewCopied: false,
+
+				get renderedText() {
+					if (!this.currentText) return '';
+					let result = this.currentText;
+					for (const v of this.variables) {
+						if (v.key) {
+							const regex = new RegExp('\\[' + v.key.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '\\]', 'g');
+							result = result.replace(regex, v.value || `[${v.key}]`);
+						}
+					}
+					return result;
+				},
+
+				init() {
+					this.loadFromStorage();
+				},
+
+				// Auto-detect [variables] from template text
+				syncVariables() {
+					const found = [];
+					const regex = /\[([^\[\]]+)\]/g;
+					let match;
+					while ((match = regex.exec(this.currentText)) !== null) {
+						found.push(match[1]);
+					}
+
+					// Add newly detected variables (keep existing values)
+					const existingKeys = this.variables.map(v => v.key);
+					for (const key of found) {
+						if (!existingKeys.includes(key)) {
+							this.variables.push({ key, value: '' });
+						}
+					}
+
+					// Remove variables no longer in template (only auto-detected ones, not manually added empties)
+					this.variables = this.variables.filter(v => {
+						// Keep if still in template, OR if it's a manually added empty key
+						return found.includes(v.key) || v.key === '';
+					});
+				},
+
+				syncFromVariables() {
+					// When user edits a variable key, rebuild template placeholders if needed
+					// (no-op for now, just let them rename freely)
+				},
+
+				addVariable() {
+					this.variables.push({ key: '', value: '' });
+				},
+
+				removeVariable(index) {
+					this.variables.splice(index, 1);
+				},
+
+				saveTemplate() {
+					if (!this.currentText.trim() || !this.currentName.trim()) return;
+
+					const template = {
+						id: this.currentId || Date.now().toString(),
+						name: this.currentName.trim(),
+						text: this.currentText,
+						variables: this.variables.filter(v => v.key),
+						savedAt: new Date().toISOString()
+					};
+
+					const index = this.templates.findIndex(t => t.id === template.id);
+					if (index >= 0) {
+						this.templates[index] = template;
+					} else {
+						this.templates.unshift(template);
+					}
+
+					this.currentId = template.id;
+					this.persistToStorage();
+
+					this.saveFlash = this.currentId ? '✓ Updated!' : '✓ Saved!';
+					setTimeout(() => { this.saveFlash = ''; }, 2000);
+				},
+
+				loadTemplate(t) {
+					this.currentId = t.id;
+					this.currentName = t.name;
+					this.currentText = t.text;
+					this.variables = t.variables.map(v => ({ ...v }));
+				},
+
+				deleteTemplate(id) {
+					this.templates = this.templates.filter(t => t.id !== id);
+					if (this.currentId === id) {
+						this.newTemplate();
+					}
+					this.persistToStorage();
+				},
+
+				newTemplate() {
+					this.currentId = null;
+					this.currentName = '';
+					this.currentText = '';
+					this.variables = [];
+				},
+
+				copyPreview() {
+					if (!this.renderedText) return;
+					navigator.clipboard.writeText(this.renderedText);
+					this.previewCopied = true;
+					setTimeout(() => { this.previewCopied = false; }, 2000);
+				},
+
+				persistToStorage() {
+					localStorage.setItem('devutils_templates', JSON.stringify(this.templates));
+				},
+
+				loadFromStorage() {
+					try {
+						const raw = localStorage.getItem('devutils_templates');
+						this.templates = raw ? JSON.parse(raw) : [];
+					} catch (e) {
+						this.templates = [];
+					}
+				}
+			}));
+		});
+	</script>
+</Layout>
