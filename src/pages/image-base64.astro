@@ -1,0 +1,167 @@
+---
+import Layout from '../layouts/Layout.astro';
+---
+
+<Layout 
+	title="Image to Base64 Converter"
+	description="Convert images to Base64 string or decode Base64 strings back to images directly in your browser without uploading to a server."
+	keywords="image to base64, base64 to image, base64 encoder, base64 decoder, image converter, online base64 image"
+>
+	<div class="max-w-6xl" x-data="imageBase64App()">
+		<h1 class="text-2xl font-bold text-zinc-900 mb-2">Image ⇄ Base64 Converter</h1>
+		<p class="text-zinc-600 mb-8">Convert images to Base64 data strings or decode Base64 strings to view and download images.</p>
+
+		<!-- Mode Switcher -->
+		<div class="flex space-x-2 mb-6 bg-zinc-100 p-1 rounded-lg w-max">
+			<button @click="setMode('encode')" :class="mode === 'encode' ? 'bg-white shadow-sm text-zinc-900' : 'text-zinc-600 hover:text-zinc-900'" class="px-4 py-2 text-sm font-medium rounded-md transition-all">
+				Image to Base64
+			</button>
+			<button @click="setMode('decode')" :class="mode === 'decode' ? 'bg-white shadow-sm text-zinc-900' : 'text-zinc-600 hover:text-zinc-900'" class="px-4 py-2 text-sm font-medium rounded-md transition-all">
+				Base64 to Image
+			</button>
+		</div>
+
+		<div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+			
+			<!-- Image to Base64 (Encode) -->
+			<div x-show="mode === 'encode'" class="space-y-6 lg:col-span-2 grid grid-cols-1 lg:grid-cols-2 gap-8">
+				<div class="space-y-4">
+					<label class="block text-sm font-medium text-zinc-700">Upload Image</label>
+					<div class="mt-1 flex justify-center px-6 pt-5 pb-6 border-2 border-zinc-300 border-dashed rounded-lg hover:bg-zinc-50 transition-colors relative">
+						<div class="space-y-1 text-center">
+							<svg class="mx-auto h-12 w-12 text-zinc-400" stroke="currentColor" fill="none" viewBox="0 0 48 48" aria-hidden="true">
+								<path d="M28 8H12a4 4 0 00-4 4v20m32-12v8m0 0v8a4 4 0 01-4 4H12a4 4 0 01-4-4v-4m32-4l-3.172-3.172a4 4 0 00-5.656 0L28 28M8 32l9.172-9.172a4 4 0 015.656 0L28 28m0 0l4 4m4-24h8m-4-4v8m-12 4h.02" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+							</svg>
+							<div class="flex text-sm text-zinc-600 justify-center">
+								<label for="file-upload" class="relative cursor-pointer bg-white rounded-md font-medium text-blue-600 hover:text-blue-500 focus-within:outline-none focus-within:ring-2 focus-within:ring-offset-2 focus-within:ring-blue-500">
+									<span>Upload a file</span>
+									<input id="file-upload" type="file" accept="image/*" class="sr-only" @change="handleFileUpload">
+								</label>
+								<p class="pl-1">or drag and drop</p>
+							</div>
+							<p class="text-xs text-zinc-500">PNG, JPG, GIF up to 5MB</p>
+						</div>
+					</div>
+					
+					<div x-show="previewImage" style="display: none;">
+						<p class="text-sm font-medium text-zinc-700 mb-2">Preview:</p>
+						<img :src="previewImage" class="max-h-64 object-contain rounded border border-zinc-200" alt="Preview">
+					</div>
+				</div>
+
+				<div class="flex flex-col h-full">
+					<div class="flex justify-between items-center mb-2">
+						<label class="text-sm font-medium text-zinc-700">Base64 Output</label>
+						<button @click="copyBase64()" class="px-3 py-1.5 border border-zinc-300 text-zinc-600 rounded text-xs font-medium hover:bg-zinc-50 transition-colors" x-text="copied ? 'Copied!' : 'Copy to Clipboard'">Copy</button>
+					</div>
+					<textarea x-model="base64Output" readonly class="w-full flex-1 min-h-[300px] px-4 py-3 bg-zinc-50 border border-zinc-300 rounded-lg shadow-sm font-mono text-sm focus:outline-none resize-y" placeholder="Base64 string will appear here..."></textarea>
+				</div>
+			</div>
+
+			<!-- Base64 to Image (Decode) -->
+			<div x-show="mode === 'decode'" style="display: none;" class="space-y-6 lg:col-span-2 grid grid-cols-1 lg:grid-cols-2 gap-8">
+				<div class="flex flex-col h-full">
+					<div class="flex justify-between items-center mb-2">
+						<label class="text-sm font-medium text-zinc-700">Base64 Input</label>
+						<button @click="clearInput()" class="px-3 py-1.5 border border-zinc-300 text-zinc-600 rounded text-xs font-medium hover:bg-zinc-50 transition-colors">Clear</button>
+					</div>
+					<textarea x-model="base64Input" @input="decodeBase64" class="w-full flex-1 min-h-[300px] px-4 py-3 bg-white border border-zinc-300 rounded-lg shadow-sm font-mono text-sm focus:outline-none focus:ring-1 focus:ring-zinc-500 focus:border-zinc-500 resize-y" placeholder="Paste your Base64 string here (with or without data:image/... prefix)"></textarea>
+				</div>
+
+				<div class="space-y-4">
+					<div class="flex justify-between items-center">
+						<label class="block text-sm font-medium text-zinc-700">Image Preview</label>
+						<a x-show="decodedImage" :href="decodedImage" download="decoded-image" class="px-3 py-1.5 bg-zinc-900 text-white rounded text-xs font-medium hover:bg-zinc-800 transition-colors">
+							Download Image
+						</a>
+					</div>
+					<div class="p-4 border border-zinc-200 bg-zinc-50 rounded-lg flex items-center justify-center min-h-[300px]">
+						<div x-show="!decodedImage && !decodeError" class="text-sm text-zinc-400">Preview will appear here</div>
+						<div x-show="decodeError" class="text-sm text-red-500 font-medium">Invalid Base64 string or format</div>
+						<img x-show="decodedImage" :src="decodedImage" class="max-w-full max-h-96 object-contain rounded" style="display: none;">
+					</div>
+				</div>
+			</div>
+		</div>
+	</div>
+
+	<script is:inline>
+		document.addEventListener('alpine:init', () => {
+			Alpine.data('imageBase64App', () => ({
+				mode: 'encode', // 'encode' or 'decode'
+				
+				// Encode states
+				previewImage: '',
+				base64Output: '',
+				copied: false,
+
+				// Decode states
+				base64Input: '',
+				decodedImage: '',
+				decodeError: false,
+
+				setMode(m) {
+					this.mode = m;
+				},
+
+				handleFileUpload(e) {
+					const file = e.target.files[0];
+					if (!file) return;
+
+					const reader = new FileReader();
+					reader.onload = (event) => {
+						const result = event.target.result;
+						this.previewImage = result;
+						this.base64Output = result;
+					};
+					reader.readAsDataURL(file);
+				},
+
+				copyBase64() {
+					if (this.base64Output) {
+						navigator.clipboard.writeText(this.base64Output);
+						this.copied = true;
+						setTimeout(() => { this.copied = false; }, 2000);
+					}
+				},
+
+				decodeBase64() {
+					const input = this.base64Input.trim();
+					this.decodeError = false;
+					
+					if (!input) {
+						this.decodedImage = '';
+						return;
+					}
+
+					// Ensure it has the data URI scheme if missing
+					let src = input;
+					if (!src.startsWith('data:image')) {
+						// Simple check to append default data URI
+						// Note: this is a naive fallback for raw base64. 
+						// Browsers can sometimes guess, but specifying png is safer.
+						src = 'data:image/png;base64,' + src;
+					}
+
+					// Basic validation - check if image loads
+					const img = new Image();
+					img.onload = () => {
+						this.decodedImage = src;
+						this.decodeError = false;
+					};
+					img.onerror = () => {
+						this.decodedImage = '';
+						this.decodeError = true;
+					};
+					img.src = src;
+				},
+
+				clearInput() {
+					this.base64Input = '';
+					this.decodedImage = '';
+					this.decodeError = false;
+				}
+			}));
+		});
+	</script>
+</Layout>
