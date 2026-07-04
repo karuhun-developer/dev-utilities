@@ -1,0 +1,226 @@
+---
+import Layout from '../layouts/Layout.astro';
+---
+
+<Layout 
+	title="Image Scaler"
+	description="Scale images up or down by percentage in your browser. Increase or decrease image size securely without server uploads."
+	keywords="scale image, image scaler, increase image size, decrease image size, online image scaler, client side photo scaling"
+>
+	<div class="max-w-6xl" x-data="imageScalerApp()">
+		<h1 class="text-2xl font-bold text-zinc-900 mb-2">Image Scaler</h1>
+		<p class="text-zinc-600 mb-8">Scale your images up or down by a percentage. Processed locally in your browser for maximum privacy and speed.</p>
+
+		<div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+			
+			<!-- Input Section -->
+			<div class="space-y-6">
+				<div class="space-y-4">
+					<label class="block text-sm font-medium text-zinc-700">Upload Original Image</label>
+					<div class="mt-1 flex justify-center px-6 pt-5 pb-6 border-2 border-zinc-300 border-dashed rounded-lg hover:bg-zinc-50 transition-colors relative">
+						<div class="space-y-1 text-center">
+							<svg class="mx-auto h-12 w-12 text-zinc-400" stroke="currentColor" fill="none" viewBox="0 0 48 48" aria-hidden="true">
+								<path d="M28 8H12a4 4 0 00-4 4v20m32-12v8m0 0v8a4 4 0 01-4 4H12a4 4 0 01-4-4v-4m32-4l-3.172-3.172a4 4 0 00-5.656 0L28 28M8 32l9.172-9.172a4 4 0 015.656 0L28 28m0 0l4 4m4-24h8m-4-4v8m-12 4h.02" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+							</svg>
+							<div class="flex text-sm text-zinc-600 justify-center">
+								<label for="file-upload" class="relative cursor-pointer bg-white rounded-md font-medium text-blue-600 hover:text-blue-500 focus-within:outline-none focus-within:ring-2 focus-within:ring-offset-2 focus-within:ring-blue-500">
+									<span>Upload a file</span>
+									<input id="file-upload" type="file" accept="image/*" class="sr-only" @change="handleFileUpload">
+								</label>
+								<p class="pl-1">or drag and drop</p>
+							</div>
+							<p class="text-xs text-zinc-500">PNG, JPG, WEBP, GIF up to 10MB</p>
+						</div>
+					</div>
+				</div>
+
+				<div x-show="originalImageSrc" style="display: none;" class="space-y-4 bg-zinc-50 p-4 border border-zinc-200 rounded-lg">
+					<div class="flex items-center justify-between">
+						<span class="text-sm font-medium text-zinc-700">Original Preview:</span>
+						<span class="text-xs font-mono bg-zinc-200 text-zinc-700 px-2 py-1 rounded" x-text="originalWidth + ' x ' + originalHeight + ' px'"></span>
+					</div>
+					<div class="flex justify-center bg-white border border-zinc-200 rounded p-2">
+						<img :src="originalImageSrc" class="max-h-64 object-contain" alt="Original Image Preview">
+					</div>
+				</div>
+			</div>
+
+			<!-- Output Settings & Preview -->
+			<div class="space-y-6">
+				<div class="bg-zinc-50 p-6 border border-zinc-200 rounded-lg space-y-5">
+					<h3 class="text-sm font-bold text-zinc-900 border-b border-zinc-200 pb-2">Scaling Settings</h3>
+					
+					<!-- Scale Presets -->
+					<div>
+						<label class="block text-sm font-medium text-zinc-700 mb-2">Quick Scale Presets</label>
+						<div class="flex flex-wrap gap-2">
+							<button @click="setScale(25)" class="px-3 py-1.5 border rounded text-sm font-medium transition-colors" :class="scalePercentage === 25 ? 'bg-zinc-900 text-white border-zinc-900' : 'bg-white text-zinc-700 border-zinc-300 hover:bg-zinc-50'">25%</button>
+							<button @click="setScale(50)" class="px-3 py-1.5 border rounded text-sm font-medium transition-colors" :class="scalePercentage === 50 ? 'bg-zinc-900 text-white border-zinc-900' : 'bg-white text-zinc-700 border-zinc-300 hover:bg-zinc-50'">50%</button>
+							<button @click="setScale(75)" class="px-3 py-1.5 border rounded text-sm font-medium transition-colors" :class="scalePercentage === 75 ? 'bg-zinc-900 text-white border-zinc-900' : 'bg-white text-zinc-700 border-zinc-300 hover:bg-zinc-50'">75%</button>
+							<button @click="setScale(150)" class="px-3 py-1.5 border rounded text-sm font-medium transition-colors" :class="scalePercentage === 150 ? 'bg-zinc-900 text-white border-zinc-900' : 'bg-white text-zinc-700 border-zinc-300 hover:bg-zinc-50'">150%</button>
+							<button @click="setScale(200)" class="px-3 py-1.5 border rounded text-sm font-medium transition-colors" :class="scalePercentage === 200 ? 'bg-zinc-900 text-white border-zinc-900' : 'bg-white text-zinc-700 border-zinc-300 hover:bg-zinc-50'">200%</button>
+						</div>
+					</div>
+
+					<!-- Custom Scale Input -->
+					<div>
+						<label class="block text-sm font-medium text-zinc-700 mb-1">
+							Custom Scale Percentage: <span x-text="scalePercentage + '%'"></span>
+						</label>
+						<div class="flex items-center space-x-4">
+							<input type="range" x-model.number="scalePercentage" min="1" max="400" step="1" class="w-full">
+							<div class="flex items-center">
+								<input type="number" x-model.number="scalePercentage" min="1" max="1000" class="w-20 px-2 py-1 text-sm border border-zinc-300 rounded focus:outline-none focus:ring-1 focus:ring-zinc-500">
+								<span class="ml-1 text-zinc-500 text-sm">%</span>
+							</div>
+						</div>
+					</div>
+
+					<!-- Projected Dimensions -->
+					<div class="bg-zinc-200/50 p-3 rounded text-sm text-zinc-700 flex justify-between items-center">
+						<span class="font-medium">Target Size:</span>
+						<span class="font-mono bg-white px-2 py-1 rounded border border-zinc-200" x-text="targetWidth + ' x ' + targetHeight + ' px'"></span>
+					</div>
+
+					<div class="pt-2">
+						<button @click="scaleImage" :disabled="!originalImageSrc || isProcessing" :class="(!originalImageSrc || isProcessing) ? 'opacity-50 cursor-not-allowed' : 'hover:bg-zinc-800'" class="w-full bg-zinc-900 text-white px-4 py-2 rounded-md text-sm font-medium transition-colors flex justify-center items-center">
+							<span x-show="!isProcessing">Scale Image</span>
+							<span x-show="isProcessing" class="flex items-center" style="display: none;">
+								<svg class="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+								Scaling...
+							</span>
+						</button>
+					</div>
+				</div>
+
+				<div x-show="scaledImageSrc" style="display: none;" class="space-y-4 bg-zinc-50 p-4 border border-zinc-200 rounded-lg">
+					<div class="flex items-center justify-between">
+						<span class="text-sm font-medium text-zinc-700">Scaled Image:</span>
+						<div class="space-x-2 flex items-center">
+							<span class="text-xs font-mono bg-zinc-200 text-zinc-700 px-2 py-1 rounded" x-text="finalWidth + ' x ' + finalHeight + ' px'"></span>
+							<a :href="scaledImageSrc" :download="downloadFilename" class="px-3 py-1.5 bg-blue-600 text-white rounded text-xs font-medium hover:bg-blue-700 transition-colors">
+								Download
+							</a>
+						</div>
+					</div>
+					<div class="flex justify-center bg-white border border-zinc-200 rounded p-2 relative">
+						<img :src="scaledImageSrc" class="max-h-64 object-contain" alt="Scaled Image">
+					</div>
+				</div>
+			</div>
+		</div>
+
+		<!-- Hidden Canvas for processing -->
+		<canvas id="scaleCanvas" style="display: none;"></canvas>
+	</div>
+
+	<script is:inline>
+		document.addEventListener('alpine:init', () => {
+			Alpine.data('imageScalerApp', () => ({
+				originalImageSrc: '',
+				originalFilename: 'image',
+				originalMimeType: 'image/jpeg',
+				
+				originalWidth: 0,
+				originalHeight: 0,
+
+				scalePercentage: 100,
+				
+				scaledImageSrc: '',
+				finalWidth: 0,
+				finalHeight: 0,
+				isProcessing: false,
+
+				get targetWidth() {
+					return Math.round(this.originalWidth * (this.scalePercentage / 100));
+				},
+
+				get targetHeight() {
+					return Math.round(this.originalHeight * (this.scalePercentage / 100));
+				},
+
+				get downloadFilename() {
+					const baseName = this.originalFilename.replace(/\.[^/.]+$/, "");
+					let ext = 'jpg';
+					if (this.originalMimeType === 'image/png') ext = 'png';
+					if (this.originalMimeType === 'image/webp') ext = 'webp';
+					return `${baseName}-scaled-${this.scalePercentage}pct.${ext}`;
+				},
+
+				setScale(percent) {
+					this.scalePercentage = percent;
+				},
+
+				handleFileUpload(e) {
+					const file = e.target.files[0];
+					if (!file) return;
+
+					this.originalFilename = file.name;
+					this.originalMimeType = file.type || 'image/jpeg';
+					
+					const reader = new FileReader();
+					reader.onload = (event) => {
+						const src = event.target.result;
+						this.originalImageSrc = src;
+						this.scaledImageSrc = ''; // clear previous
+						this.scalePercentage = 100; // reset to 100%
+						
+						// Load image to get original dimensions
+						const img = new Image();
+						img.onload = () => {
+							this.originalWidth = img.width;
+							this.originalHeight = img.height;
+						};
+						img.src = src;
+					};
+					reader.readAsDataURL(file);
+				},
+
+				scaleImage() {
+					if (!this.originalImageSrc || this.isProcessing) return;
+					if (this.targetWidth <= 0 || this.targetHeight <= 0) {
+						alert("Scale percentage is too small.");
+						return;
+					}
+					
+					this.isProcessing = true;
+					this.scaledImageSrc = '';
+
+					// Small timeout to allow UI to update to loading state
+					setTimeout(() => {
+						const img = new Image();
+						img.onload = () => {
+							try {
+								const canvas = document.getElementById('scaleCanvas');
+								const ctx = canvas.getContext('2d');
+								
+								canvas.width = this.targetWidth;
+								canvas.height = this.targetHeight;
+								
+								// Draw with new dimensions
+								ctx.drawImage(img, 0, 0, this.targetWidth, this.targetHeight);
+
+								// Output as same mime type as original (default to 0.9 quality if jpeg/webp)
+								const dataUrl = canvas.toDataURL(this.originalMimeType, 0.9);
+								
+								this.scaledImageSrc = dataUrl;
+								this.finalWidth = this.targetWidth;
+								this.finalHeight = this.targetHeight;
+							} catch (e) {
+								console.error("Error scaling image:", e);
+								alert("Failed to scale image. Image might be too large.");
+							} finally {
+								this.isProcessing = false;
+							}
+						};
+						img.onerror = () => {
+							alert("Error loading image for scaling.");
+							this.isProcessing = false;
+						};
+						img.src = this.originalImageSrc;
+					}, 50);
+				}
+			}));
+		});
+	</script>
+</Layout>
