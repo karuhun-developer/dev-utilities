@@ -1,0 +1,157 @@
+---
+import Layout from '../layouts/Layout.astro';
+---
+
+<Layout 
+	title="Hash Generator & Validator"
+	description="Compute and validate SHA-1, SHA-256, SHA-384, and SHA-512 hashes online. Fast and secure hashing directly in your browser."
+	keywords="hash generator, sha256 generator, sha1 generator, validate hash, online hash calculator"
+>
+	<div class="max-w-4xl" x-data="hashApp()">
+		<h1 class="text-2xl font-bold text-zinc-900 mb-2">Hash Generator & Validator</h1>
+		<p class="text-zinc-600 mb-8">Generate cryptographic hashes or validate a given hash against an input text.</p>
+
+		<div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+			
+			<div class="space-y-6">
+				<div>
+					<label for="input" class="block text-sm font-medium text-zinc-700 mb-2">Input Text</label>
+					<textarea id="input" rows="4" x-model="inputText" @input="computeHashes" class="w-full px-3 py-2 border border-zinc-300 rounded-md shadow-sm focus:outline-none focus:ring-zinc-500 focus:border-zinc-500 sm:text-sm font-mono" placeholder="Type text here..."></textarea>
+				</div>
+				
+				<div>
+					<label for="expectedHash" class="block text-sm font-medium text-zinc-700 mb-2">Compare / Validate Hash (Optional)</label>
+					<input type="text" id="expectedHash" x-model="expectedHash" @input="validate" class="w-full px-3 py-2 border border-zinc-300 rounded-md shadow-sm focus:outline-none focus:ring-zinc-500 focus:border-zinc-500 sm:text-sm font-mono" placeholder="e.g. 5d41402abc4b2a76b9719d911017c592">
+				</div>
+
+				<div x-show="showValidation" class="p-3 rounded-md text-sm font-medium" :class="validationClass" x-text="validationMessage" style="display: none;"></div>
+			</div>
+
+			<div class="space-y-4">
+				<div class="bg-zinc-50 p-4 border border-zinc-200 rounded-lg">
+					<div class="flex justify-between items-center mb-1">
+						<span class="text-xs font-bold text-zinc-500 uppercase tracking-wider">SHA-1</span>
+						<button @click="copy('sha1')" class="text-zinc-400 hover:text-zinc-800 text-xs font-medium" x-text="copied.sha1 ? 'Copied!' : 'Copy'">Copy</button>
+					</div>
+					<div class="text-sm font-mono text-zinc-900 break-all" x-text="hashes.sha1"></div>
+				</div>
+				<div class="bg-zinc-50 p-4 border border-zinc-200 rounded-lg">
+					<div class="flex justify-between items-center mb-1">
+						<span class="text-xs font-bold text-zinc-500 uppercase tracking-wider">SHA-256</span>
+						<button @click="copy('sha256')" class="text-zinc-400 hover:text-zinc-800 text-xs font-medium" x-text="copied.sha256 ? 'Copied!' : 'Copy'">Copy</button>
+					</div>
+					<div class="text-sm font-mono text-zinc-900 break-all" x-text="hashes.sha256"></div>
+				</div>
+				<div class="bg-zinc-50 p-4 border border-zinc-200 rounded-lg">
+					<div class="flex justify-between items-center mb-1">
+						<span class="text-xs font-bold text-zinc-500 uppercase tracking-wider">SHA-384</span>
+						<button @click="copy('sha384')" class="text-zinc-400 hover:text-zinc-800 text-xs font-medium" x-text="copied.sha384 ? 'Copied!' : 'Copy'">Copy</button>
+					</div>
+					<div class="text-sm font-mono text-zinc-900 break-all" x-text="hashes.sha384"></div>
+				</div>
+				<div class="bg-zinc-50 p-4 border border-zinc-200 rounded-lg">
+					<div class="flex justify-between items-center mb-1">
+						<span class="text-xs font-bold text-zinc-500 uppercase tracking-wider">SHA-512</span>
+						<button @click="copy('sha512')" class="text-zinc-400 hover:text-zinc-800 text-xs font-medium" x-text="copied.sha512 ? 'Copied!' : 'Copy'">Copy</button>
+					</div>
+					<div class="text-sm font-mono text-zinc-900 break-all" x-text="hashes.sha512"></div>
+				</div>
+			</div>
+		</div>
+	</div>
+
+	<script is:inline>
+		document.addEventListener('alpine:init', () => {
+			Alpine.data('hashApp', () => ({
+				inputText: '',
+				expectedHash: '',
+				showValidation: false,
+				validationMessage: '',
+				validationClass: '',
+				hashes: {
+					sha1: '',
+					sha256: '',
+					sha384: '',
+					sha512: ''
+				},
+				copied: {
+					sha1: false,
+					sha256: false,
+					sha384: false,
+					sha512: false
+				},
+
+				async computeHashes() {
+					const text = this.inputText;
+					if (!text) {
+						this.hashes = { sha1: '', sha256: '', sha384: '', sha512: '' };
+						this.validate();
+						return;
+					}
+
+					const encoder = new TextEncoder();
+					const data = encoder.encode(text);
+
+					const [sha1, sha256, sha384, sha512] = await Promise.all([
+						crypto.subtle.digest('SHA-1', data),
+						crypto.subtle.digest('SHA-256', data),
+						crypto.subtle.digest('SHA-384', data),
+						crypto.subtle.digest('SHA-512', data)
+					]);
+
+					const buf2hex = (buffer) => Array.from(new Uint8Array(buffer)).map(b => b.toString(16).padStart(2, '0')).join('');
+
+					this.hashes.sha1 = buf2hex(sha1);
+					this.hashes.sha256 = buf2hex(sha256);
+					this.hashes.sha384 = buf2hex(sha384);
+					this.hashes.sha512 = buf2hex(sha512);
+
+					this.validate();
+				},
+
+				validate() {
+					const expected = this.expectedHash.trim().toLowerCase();
+					if (!expected) {
+						this.showValidation = false;
+						return;
+					}
+
+					this.showValidation = true;
+
+					if (!this.inputText) {
+						this.validationClass = 'bg-zinc-100 text-zinc-700';
+						this.validationMessage = 'Please enter input text to validate.';
+						return;
+					}
+
+					let match = false;
+					let matchedAlgo = '';
+					
+					for (const [algo, hashVal] of Object.entries(this.hashes)) {
+						if (hashVal === expected) {
+							match = true;
+							matchedAlgo = algo;
+							break;
+						}
+					}
+
+					if (match) {
+						this.validationClass = 'bg-green-50 border border-green-200 text-green-700';
+						this.validationMessage = `✅ Hash matches! (Algorithm: ${matchedAlgo.toUpperCase()})`;
+					} else {
+						this.validationClass = 'bg-red-50 border border-red-200 text-red-700';
+						this.validationMessage = `❌ Hash does not match any generated algorithm.`;
+					}
+				},
+
+				copy(algo) {
+					if (this.hashes[algo]) {
+						navigator.clipboard.writeText(this.hashes[algo]);
+						this.copied[algo] = true;
+						setTimeout(() => { this.copied[algo] = false; }, 2000);
+					}
+				}
+			}));
+		});
+	</script>
+</Layout>

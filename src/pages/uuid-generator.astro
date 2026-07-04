@@ -1,0 +1,68 @@
+---
+import Layout from '../layouts/Layout.astro';
+---
+
+<Layout 
+	title="UUID Generator"
+	description="Generate RFC 4122 compliant UUIDs (v4) online instantly. Generate up to 100 UUIDs at once. Fast, secure, and client-side only."
+	keywords="uuid generator, guid generator, generate uuid v4, bulk uuid generator"
+>
+	<div class="max-w-2xl" x-data="uuidApp()">
+		<h1 class="text-2xl font-bold text-zinc-900 mb-2">UUID Generator</h1>
+		<p class="text-zinc-600 mb-8">Generate cryptographically secure UUIDs (Version 4).</p>
+
+		<div class="space-y-6">
+			<div>
+				<label for="count" class="block text-sm font-medium text-zinc-700 mb-1">How many to generate?</label>
+				<input type="number" id="count" x-model.number="count" min="1" max="100" class="w-full sm:w-32 px-3 py-2 border border-zinc-300 rounded-md shadow-sm focus:outline-none focus:ring-zinc-500 focus:border-zinc-500 sm:text-sm">
+			</div>
+
+			<div class="pt-2">
+				<button @click="generate()" class="bg-zinc-900 text-white px-4 py-2 rounded-md text-sm font-medium hover:bg-zinc-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-zinc-900 transition-colors">
+					Generate UUIDs
+				</button>
+			</div>
+
+			<div class="mt-6">
+				<label class="block text-sm font-medium text-zinc-700 mb-2">Result</label>
+				<div class="relative">
+					<textarea rows="10" readonly x-model="result" class="w-full px-4 py-3 bg-zinc-50 border border-zinc-300 rounded-lg shadow-sm font-mono text-zinc-900 text-sm focus:outline-none"></textarea>
+					<button @click="copy()" class="absolute top-2 right-2 p-2 text-zinc-500 hover:text-zinc-900 bg-white border border-zinc-200 rounded shadow-sm text-xs font-medium transition-colors" x-text="copied ? 'Copied!' : 'Copy All'">
+						Copy All
+					</button>
+				</div>
+			</div>
+		</div>
+	</div>
+
+	<script is:inline>
+		document.addEventListener('alpine:init', () => {
+			Alpine.data('uuidApp', () => ({
+				count: 1,
+				result: '',
+				copied: false,
+
+				init() {
+					this.generate();
+				},
+
+				generate() {
+					const c = Math.min(Math.max(this.count || 1, 1), 500);
+					let uuids = [];
+					for (let i = 0; i < c; i++) {
+						uuids.push(crypto.randomUUID());
+					}
+					this.result = uuids.join('\n');
+				},
+
+				copy() {
+					if (this.result) {
+						navigator.clipboard.writeText(this.result);
+						this.copied = true;
+						setTimeout(() => { this.copied = false; }, 2000);
+					}
+				}
+			}));
+		});
+	</script>
+</Layout>

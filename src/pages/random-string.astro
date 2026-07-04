@@ -1,0 +1,122 @@
+---
+import Layout from '../layouts/Layout.astro';
+---
+
+<Layout 
+	title="Random String Generator"
+	description="Generate secure random strings online. Customize length, characters, and symbols for passwords, tokens, or API keys directly in your browser."
+	keywords="random string generator, random password generator, secure token generator, secure string generator online"
+>
+	<div class="max-w-2xl" x-data="randomStringApp()">
+		<h1 class="text-2xl font-bold text-zinc-900 mb-2">Random String Generator</h1>
+		<p class="text-zinc-600 mb-8">Generate secure random strings with customizable length and characters.</p>
+
+		<div class="space-y-6">
+			<div>
+				<label for="length" class="block text-sm font-medium text-zinc-700 mb-1">Length</label>
+				<input type="number" id="length" x-model.number="length" min="1" max="256" class="w-full sm:w-32 px-3 py-2 border border-zinc-300 rounded-md shadow-sm focus:outline-none focus:ring-zinc-500 focus:border-zinc-500 sm:text-sm">
+			</div>
+
+			<div class="space-y-3">
+				<div class="flex items-start">
+					<div class="flex items-center h-5">
+						<input id="uppercase" type="checkbox" x-model="useUpper" class="focus:ring-zinc-500 h-4 w-4 text-zinc-600 border-zinc-300 rounded">
+					</div>
+					<div class="ml-3 text-sm">
+						<label for="uppercase" class="font-medium text-zinc-700">Uppercase (A-Z)</label>
+					</div>
+				</div>
+				<div class="flex items-start">
+					<div class="flex items-center h-5">
+						<input id="lowercase" type="checkbox" x-model="useLower" class="focus:ring-zinc-500 h-4 w-4 text-zinc-600 border-zinc-300 rounded">
+					</div>
+					<div class="ml-3 text-sm">
+						<label for="lowercase" class="font-medium text-zinc-700">Lowercase (a-z)</label>
+					</div>
+				</div>
+				<div class="flex items-start">
+					<div class="flex items-center h-5">
+						<input id="numbers" type="checkbox" x-model="useNumbers" class="focus:ring-zinc-500 h-4 w-4 text-zinc-600 border-zinc-300 rounded">
+					</div>
+					<div class="ml-3 text-sm">
+						<label for="numbers" class="font-medium text-zinc-700">Numbers (0-9)</label>
+					</div>
+				</div>
+				<div class="flex items-start">
+					<div class="flex items-center h-5">
+						<input id="symbols" type="checkbox" x-model="useSymbols" class="focus:ring-zinc-500 h-4 w-4 text-zinc-600 border-zinc-300 rounded">
+					</div>
+					<div class="ml-3 text-sm">
+						<label for="symbols" class="font-medium text-zinc-700">Symbols (!@#$%^&*)</label>
+					</div>
+				</div>
+			</div>
+
+			<div class="pt-4">
+				<button @click="generate()" class="bg-zinc-900 text-white px-4 py-2 rounded-md text-sm font-medium hover:bg-zinc-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-zinc-900 transition-colors">
+					Generate String
+				</button>
+			</div>
+
+			<div class="mt-6">
+				<label class="block text-sm font-medium text-zinc-700 mb-2">Result</label>
+				<div class="relative">
+					<textarea rows="3" readonly x-model="result" class="w-full px-4 py-3 bg-zinc-50 border border-zinc-300 rounded-lg shadow-sm font-mono text-zinc-900 text-sm focus:outline-none"></textarea>
+					<button @click="copy()" class="absolute top-2 right-2 p-2 text-zinc-500 hover:text-zinc-900 bg-white border border-zinc-200 rounded shadow-sm text-xs font-medium transition-colors" x-text="copied ? 'Copied!' : 'Copy'">
+						Copy
+					</button>
+				</div>
+			</div>
+		</div>
+	</div>
+
+	<script is:inline>
+		document.addEventListener('alpine:init', () => {
+			Alpine.data('randomStringApp', () => ({
+				length: 16,
+				useUpper: true,
+				useLower: true,
+				useNumbers: true,
+				useSymbols: false,
+				result: '',
+				copied: false,
+
+				init() {
+					this.generate();
+				},
+
+				generate() {
+					let chars = '';
+					if (this.useUpper) chars += 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+					if (this.useLower) chars += 'abcdefghijklmnopqrstuvwxyz';
+					if (this.useNumbers) chars += '0123456789';
+					if (this.useSymbols) chars += '!@#$%^&*()_+~`|}{[]:;?><,./-=';
+
+					if (chars.length === 0) {
+						this.result = 'Please select at least one character type.';
+						return;
+					}
+
+					let str = '';
+					const length = Math.max(1, Math.min(256, this.length || 16));
+					const randomValues = new Uint32Array(length);
+					window.crypto.getRandomValues(randomValues);
+
+					for (let i = 0; i < length; i++) {
+						str += chars[randomValues[i] % chars.length];
+					}
+
+					this.result = str;
+				},
+
+				copy() {
+					if (this.result && this.result !== 'Please select at least one character type.') {
+						navigator.clipboard.writeText(this.result);
+						this.copied = true;
+						setTimeout(() => { this.copied = false; }, 2000);
+					}
+				}
+			}));
+		});
+	</script>
+</Layout>

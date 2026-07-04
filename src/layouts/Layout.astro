@@ -1,23 +1,69 @@
+---
+import '../styles/global.css';
+
+interface Props {
+	title: string;
+	description?: string;
+	keywords?: string;
+	canonicalUrl?: string;
+}
+
+const { 
+	title, 
+	description = "A collection of fast, browser-based tools for developers. Everything runs locally in your browser to ensure privacy and speed.",
+	keywords = "developer tools, utilities, random string generator, uuid generator, hash generator",
+	canonicalUrl = Astro.url.href
+} = Astro.props;
+---
+
 <!doctype html>
 <html lang="en">
 	<head>
 		<meta charset="utf-8" />
 		<meta name="viewport" content="width=device-width" />
-		<link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-		<link rel="icon" href="/favicon.ico" />
+		<link rel="icon" type="image/x-icon" href="/favicon.ico" />
 		<meta name="generator" content={Astro.generator} />
-		<title>Astro Basics</title>
+		
+		<!-- SEO Meta Tags -->
+		<title>{title} - Dev Utils</title>
+		<meta name="description" content={description} />
+		<meta name="keywords" content={keywords} />
+		<link rel="canonical" href={canonicalUrl} />
+		
+		<!-- Open Graph / Facebook -->
+		<meta property="og:type" content="website" />
+		<meta property="og:url" content={canonicalUrl} />
+		<meta property="og:title" content={`${title} - Dev Utils`} />
+		<meta property="og:description" content={description} />
+		
+		<!-- Twitter -->
+		<meta property="twitter:card" content="summary_large_image" />
+		<meta property="twitter:url" content={canonicalUrl} />
+		<meta property="twitter:title" content={`${title} - Dev Utils`} />
+		<meta property="twitter:description" content={description} />
 	</head>
-	<body>
-		<slot />
+	<body class="bg-zinc-50 text-zinc-900 font-sans antialiased min-h-screen flex flex-col">
+		<header class="bg-white border-b border-zinc-200 py-4 px-6 sticky top-0 z-10">
+			<div class="max-w-7xl mx-auto flex items-center justify-between">
+				<a href="/" class="flex items-center gap-3">
+					<img src="/logo.png" alt="Karuhun Logo" class="h-8 w-auto" />
+					<span class="text-xl font-bold tracking-tight">Karuhun <span class="font-normal text-zinc-500">DevUtils</span></span>
+				</a>
+			</div>
+		</header>
+		
+		<div class="flex-1 max-w-7xl mx-auto w-full flex flex-col md:flex-row">
+			<aside class="w-full md:w-64 border-r border-zinc-200 bg-zinc-50/50 p-6">
+				<nav class="space-y-1">
+					<p class="text-xs font-semibold text-zinc-400 uppercase tracking-wider mb-3">Utilities</p>
+					<a href="/random-string" class="block px-3 py-2 text-sm font-medium rounded-md hover:bg-zinc-100 hover:text-zinc-900 text-zinc-600 transition-colors">Random String</a>
+					<a href="/uuid-generator" class="block px-3 py-2 text-sm font-medium rounded-md hover:bg-zinc-100 hover:text-zinc-900 text-zinc-600 transition-colors">UUID Generator</a>
+					<a href="/hash-generator" class="block px-3 py-2 text-sm font-medium rounded-md hover:bg-zinc-100 hover:text-zinc-900 text-zinc-600 transition-colors">Hash Gen & Validate</a>
+				</nav>
+			</aside>
+			<main class="flex-1 p-6 md:p-10 bg-white">
+				<slot />
+			</main>
+		</div>
 	</body>
 </html>
-
-<style>
-	html,
-	body {
-		margin: 0;
-		width: 100%;
-		height: 100%;
-	}
-</style>
