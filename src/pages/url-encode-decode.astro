@@ -1,0 +1,91 @@
+---
+import Layout from '../layouts/Layout.astro';
+---
+
+<Layout 
+	title="URL Encoder & Decoder"
+	description="Encode and decode URLs quickly and securely in your browser. Fast client-side URL encoder and decoder developer utility."
+	keywords="url encode, url decode, encodeURIComponent, url percent encoding, online url encoder, developer tools"
+>
+	<div class="max-w-6xl" x-data="urlConverterApp()">
+		<h1 class="text-2xl font-bold text-zinc-900 mb-2">URL Encoder & Decoder</h1>
+		<p class="text-zinc-600 mb-8">Quickly encode or decode your URLs (Percent-encoding) safely and entirely in the browser.</p>
+
+		<div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+			<!-- Input Section -->
+			<div class="flex flex-col h-full">
+				<div class="flex justify-between items-center mb-2">
+					<label for="input" class="text-sm font-medium text-zinc-700">Input Text or URL</label>
+					<div class="space-x-2 flex">
+						<button @click="encode()" class="px-3 py-1.5 bg-zinc-900 text-white rounded text-xs font-medium hover:bg-zinc-800 transition-colors">Encode</button>
+						<button @click="decode()" class="px-3 py-1.5 bg-zinc-200 text-zinc-800 rounded text-xs font-medium hover:bg-zinc-300 transition-colors">Decode</button>
+						<button @click="clear()" class="px-3 py-1.5 border border-zinc-300 text-zinc-600 rounded text-xs font-medium hover:bg-zinc-50 transition-colors">Clear</button>
+					</div>
+				</div>
+				<textarea id="input" x-model="inputText" @input="clearError" class="w-full flex-1 min-h-[400px] px-4 py-3 bg-zinc-50 border border-zinc-300 rounded-lg shadow-sm font-mono text-sm focus:outline-none focus:ring-1 focus:ring-zinc-500 focus:border-zinc-500 resize-y" placeholder="Paste your text or URL here..."></textarea>
+				
+				<div x-show="errorMessage" class="mt-4 p-3 rounded-md text-sm font-medium bg-red-50 border border-red-200 text-red-700 break-words" x-text="errorMessage" style="display: none;"></div>
+			</div>
+
+			<!-- Output Section -->
+			<div class="flex flex-col h-full mt-8 lg:mt-0">
+				<div class="flex justify-between items-center mb-2">
+					<label for="output" class="text-sm font-medium text-zinc-700">Output</label>
+					<button @click="copy()" class="px-3 py-1.5 border border-zinc-300 text-zinc-600 rounded text-xs font-medium hover:bg-zinc-50 transition-colors" x-text="copied ? 'Copied!' : 'Copy to Clipboard'">Copy to Clipboard</button>
+				</div>
+				<textarea id="output" x-model="outputText" readonly class="w-full flex-1 min-h-[400px] px-4 py-3 bg-zinc-100 border border-zinc-300 rounded-lg shadow-sm font-mono text-sm focus:outline-none resize-y" placeholder="Result will appear here..."></textarea>
+			</div>
+		</div>
+	</div>
+
+	<script is:inline>
+		document.addEventListener('alpine:init', () => {
+			Alpine.data('urlConverterApp', () => ({
+				inputText: '',
+				outputText: '',
+				errorMessage: '',
+				copied: false,
+
+				clearError() {
+					this.errorMessage = '';
+				},
+
+				encode() {
+					if (!this.inputText) return;
+					try {
+						this.outputText = encodeURIComponent(this.inputText);
+						this.errorMessage = '';
+					} catch (e) {
+						this.errorMessage = 'Failed to encode input.';
+						this.outputText = '';
+					}
+				},
+
+				decode() {
+					if (!this.inputText) return;
+					try {
+						this.outputText = decodeURIComponent(this.inputText);
+						this.errorMessage = '';
+					} catch (e) {
+						this.errorMessage = 'Failed to decode input. The input might not be a valid encoded URL.';
+						this.outputText = '';
+					}
+				},
+
+				clear() {
+					this.inputText = '';
+					this.outputText = '';
+					this.errorMessage = '';
+				},
+
+				copy() {
+					if (this.outputText) {
+						navigator.clipboard.writeText(this.outputText);
+						this.copied = true;
+						setTimeout(() => { this.copied = false; }, 2000);
+					}
+				}
+			}));
+		});
+	</script>
+</Layout>
