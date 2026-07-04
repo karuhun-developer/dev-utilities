@@ -1,0 +1,232 @@
+---
+import Layout from '../layouts/Layout.astro';
+---
+
+<Layout
+	title="Barcode Generator"
+	description="Generate barcodes online in multiple formats: CODE128, EAN-13, EAN-8, UPC-A, CODE39, and more. Download as PNG or SVG for free."
+	keywords="barcode generator, create barcode, code128, ean-13, upc barcode, barcode maker online, free barcode generator"
+>
+	<div class="max-w-4xl" x-data="barcodeApp()">
+		<h1 class="text-2xl font-bold text-zinc-900 mb-2">Barcode Generator</h1>
+		<p class="text-zinc-600 mb-8">Generate barcodes in multiple formats from any text or number. Download as PNG or SVG.</p>
+
+		<div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+
+			<!-- Settings -->
+			<div class="space-y-5">
+				<div>
+					<label class="block text-sm font-medium text-zinc-700 mb-1">Format</label>
+					<select x-model="format" @change="onFormatChange()" class="w-full px-3 py-2 border border-zinc-300 rounded-md text-sm focus:outline-none focus:ring-1 focus:ring-zinc-500 bg-white">
+						<option value="CODE128">CODE128 — Any text (recommended)</option>
+						<option value="CODE39">CODE39 — Uppercase letters & digits</option>
+						<option value="EAN13">EAN-13 — 12 or 13 digits</option>
+						<option value="EAN8">EAN-8 — 7 or 8 digits</option>
+						<option value="UPC">UPC-A — 11 or 12 digits</option>
+						<option value="ITF14">ITF-14 — 13 or 14 digits</option>
+						<option value="MSI">MSI — Digits only</option>
+						<option value="pharmacode">Pharmacode — 1–131070</option>
+					</select>
+				</div>
+
+				<div>
+					<label class="block text-sm font-medium text-zinc-700 mb-1">Value</label>
+					<input
+						type="text"
+						x-model="inputText"
+						@input="debouncedGenerate()"
+						:placeholder="formatPlaceholder"
+						class="w-full px-3 py-2 border border-zinc-300 rounded-md text-sm font-mono focus:outline-none focus:ring-1 focus:ring-zinc-500"
+					>
+					<p class="text-xs text-zinc-400 mt-1" x-text="formatHint"></p>
+				</div>
+
+				<div class="grid grid-cols-2 gap-4">
+					<div>
+						<label class="block text-sm font-medium text-zinc-700 mb-1">Bar Color</label>
+						<div class="flex gap-2 items-center">
+							<input type="color" x-model="lineColor" @change="generate()" class="h-9 w-14 border border-zinc-300 rounded cursor-pointer">
+							<input type="text" x-model="lineColor" @change="generate()" class="flex-1 px-2 py-2 border border-zinc-300 rounded-md text-sm font-mono focus:outline-none focus:ring-1 focus:ring-zinc-500">
+						</div>
+					</div>
+					<div>
+						<label class="block text-sm font-medium text-zinc-700 mb-1">Background</label>
+						<div class="flex gap-2 items-center">
+							<input type="color" x-model="bgColor" @change="generate()" class="h-9 w-14 border border-zinc-300 rounded cursor-pointer">
+							<input type="text" x-model="bgColor" @change="generate()" class="flex-1 px-2 py-2 border border-zinc-300 rounded-md text-sm font-mono focus:outline-none focus:ring-1 focus:ring-zinc-500">
+						</div>
+					</div>
+				</div>
+
+				<div class="grid grid-cols-2 gap-4">
+					<div>
+						<label class="block text-sm font-medium text-zinc-700 mb-1">Height (px)</label>
+						<input type="number" x-model.number="barHeight" @change="generate()" min="20" max="300"
+							class="w-full px-3 py-2 border border-zinc-300 rounded-md text-sm focus:outline-none focus:ring-1 focus:ring-zinc-500">
+					</div>
+					<div class="flex items-end pb-0.5">
+						<label class="flex items-center gap-2 cursor-pointer">
+							<input type="checkbox" x-model="showText" @change="generate()" class="h-4 w-4 rounded border-zinc-300 text-zinc-900 focus:ring-zinc-500">
+							<span class="text-sm font-medium text-zinc-700">Show text below</span>
+						</label>
+					</div>
+				</div>
+
+				<div class="flex gap-3 pt-1">
+					<button @click="downloadPng()" :disabled="!isValid" :class="!isValid ? 'opacity-50 cursor-not-allowed' : 'hover:bg-zinc-800'" class="bg-zinc-900 text-white px-4 py-2 rounded-md text-sm font-medium transition-colors">
+						Download PNG
+					</button>
+					<button @click="downloadSvg()" :disabled="!isValid" :class="!isValid ? 'opacity-50 cursor-not-allowed' : 'hover:border-zinc-500'" class="border border-zinc-300 text-zinc-700 px-4 py-2 rounded-md text-sm font-medium hover:bg-zinc-50 transition-colors">
+						Download SVG
+					</button>
+				</div>
+			</div>
+
+			<!-- Preview -->
+			<div class="flex flex-col items-center justify-center bg-zinc-50 border border-zinc-200 rounded-lg p-6 min-h-[280px]">
+				<div x-show="isValid" style="display:none;" class="flex flex-col items-center gap-3 w-full">
+					<div class="bg-white rounded p-4 shadow-sm w-full flex justify-center overflow-x-auto">
+						<svg id="barcode-svg"></svg>
+					</div>
+					<canvas id="barcode-canvas" style="display:none;"></canvas>
+				</div>
+				<div x-show="errorMsg" class="text-sm text-red-500 text-center" x-text="errorMsg" style="display:none;"></div>
+				<div x-show="!isValid && !errorMsg" class="text-sm text-zinc-400 italic text-center">
+					Enter a value above to generate a barcode
+				</div>
+			</div>
+		</div>
+	</div>
+
+	<script is:inline>
+		window.__bcLoaded = new Promise((resolve, reject) => {
+			const s = document.createElement('script');
+			s.src = 'https://cdn.jsdelivr.net/npm/jsbarcode@3.11.6/dist/JsBarcode.all.min.js';
+			s.onload = resolve;
+			s.onerror = reject;
+			document.head.appendChild(s);
+		});
+
+		document.addEventListener('alpine:init', () => {
+			Alpine.data('barcodeApp', () => ({
+				format: 'CODE128',
+				inputText: '12345678',
+				lineColor: '#18181b',
+				bgColor: '#ffffff',
+				barHeight: 80,
+				showText: true,
+				isValid: false,
+				errorMsg: '',
+				_timer: null,
+
+				// Default example values per format
+				formatDefaults: {
+					CODE128: '12345678',
+					CODE39: 'HELLO123',
+					EAN13: '590123412345',
+					EAN8: '9638507',
+					UPC: '03600029145',
+					ITF14: '1234567890123',
+					MSI: '12345678',
+					pharmacode: '1337'
+				},
+
+				get formatPlaceholder() {
+					return this.formatDefaults[this.format] || '';
+				},
+
+				get formatHint() {
+					const map = {
+						CODE128: 'Supports all ASCII characters.',
+						CODE39: 'A-Z, 0-9, and - . $ / + % space only.',
+						EAN13: 'Must be 12 digits (check digit auto-calculated) or 13 digits.',
+						EAN8: 'Must be 7 digits (check digit auto-calculated) or 8 digits.',
+						UPC: 'Must be 11 digits (check digit auto-calculated) or 12 digits.',
+						ITF14: 'Must be 13 or 14 digits.',
+						MSI: 'Digits only.',
+						pharmacode: 'Numeric value between 3 and 131070.'
+					};
+					return map[this.format] || '';
+				},
+
+				async init() {
+					await window.__bcLoaded;
+					this.generate();
+				},
+
+				// Called when format dropdown changes
+				onFormatChange() {
+					// Reset input to valid default for new format
+					this.inputText = this.formatDefaults[this.format] || '';
+					this.generate();
+				},
+
+				debouncedGenerate() {
+					clearTimeout(this._timer);
+					this._timer = setTimeout(() => this.generate(), 300);
+				},
+
+				async generate() {
+					if (!this.inputText.trim()) {
+						this.isValid = false;
+						this.errorMsg = '';
+						return;
+					}
+					await window.__bcLoaded;
+					try {
+						this.errorMsg = '';
+						JsBarcode('#barcode-svg', this.inputText, {
+							format: this.format,
+							lineColor: this.lineColor,
+							background: this.bgColor,
+							height: this.barHeight,
+							displayValue: this.showText,
+							margin: 10,
+							fontSize: 14
+						});
+						this.isValid = true;
+					} catch(e) {
+						this.isValid = false;
+						// Safe error message — e.message can be undefined for some JsBarcode errors
+						const msg = (e && e.message) ? e.message.split('.')[0] : 'Invalid value for this format';
+						this.errorMsg = msg;
+					}
+				},
+
+				downloadPng() {
+					if (!this.isValid) return;
+					const svg = document.getElementById('barcode-svg');
+					const canvas = document.createElement('canvas');
+					const ctx = canvas.getContext('2d');
+					const svgData = new XMLSerializer().serializeToString(svg);
+					const svgBlob = new Blob([svgData], { type: 'image/svg+xml;charset=utf-8' });
+					const url = URL.createObjectURL(svgBlob);
+					const img = new Image();
+					img.onload = () => {
+						canvas.width = img.width;
+						canvas.height = img.height;
+						ctx.drawImage(img, 0, 0);
+						URL.revokeObjectURL(url);
+						const a = document.createElement('a');
+						a.href = canvas.toDataURL('image/png');
+						a.download = `barcode-${this.format.toLowerCase()}.png`;
+						a.click();
+					};
+					img.src = url;
+				},
+
+				downloadSvg() {
+					if (!this.isValid) return;
+					const svg = document.getElementById('barcode-svg');
+					const svgData = new XMLSerializer().serializeToString(svg);
+					const blob = new Blob([svgData], { type: 'image/svg+xml;charset=utf-8' });
+					const a = document.createElement('a');
+					a.href = URL.createObjectURL(blob);
+					a.download = `barcode-${this.format.toLowerCase()}.svg`;
+					a.click();
+				}
+			}));
+		});
+	</script>
+</Layout>
+
