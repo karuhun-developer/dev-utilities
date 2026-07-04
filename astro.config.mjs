@@ -3,11 +3,13 @@ import { defineConfig } from "astro/config";
 import tailwindcss from "@tailwindcss/vite";
 import alpinejs from "@astrojs/alpinejs";
 import AstroPWA from "@vite-pwa/astro";
+import sitemap from "@astrojs/sitemap";
 
 // https://astro.build/config
 export default defineConfig({
   site: "https://utilities.karuhundeveloper.com",
   integrations: [
+    sitemap(),
     alpinejs(),
     AstroPWA({
       registerType: "autoUpdate",

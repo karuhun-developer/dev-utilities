@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://https://utilities.karuhundeveloper.com/sitemap-index.xml
