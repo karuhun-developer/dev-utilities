@@ -1,0 +1,139 @@
+---
+import Layout from '../layouts/Layout.astro';
+---
+
+<Layout 
+	title="Bcrypt Generator & Validator"
+	description="Generate and validate Bcrypt hashes online. Secure, client-side Bcrypt hashing with customizable salt rounds for your passwords and tokens."
+	keywords="bcrypt generator, bcrypt hash, bcrypt validator, password hashing, secure hash generator, online bcrypt tool"
+>
+	<div class="max-w-4xl" x-data="bcryptApp()">
+		<h1 class="text-2xl font-bold text-zinc-900 mb-2">Bcrypt Generator & Validator</h1>
+		<p class="text-zinc-600 mb-8">Generate Bcrypt hashes or validate a plain text against an existing Bcrypt hash.</p>
+
+		<div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+			
+			<div class="space-y-6">
+				<div>
+					<label for="input" class="block text-sm font-medium text-zinc-700 mb-2">Input Text (Password)</label>
+					<input type="text" id="input" x-model="inputText" @input="debouncedGenerate" class="w-full px-3 py-2 border border-zinc-300 rounded-md shadow-sm focus:outline-none focus:ring-zinc-500 focus:border-zinc-500 sm:text-sm font-mono" placeholder="Type text here...">
+				</div>
+				
+				<div>
+					<label for="saltRounds" class="block text-sm font-medium text-zinc-700 mb-2">Salt Rounds: <span x-text="saltRounds"></span></label>
+					<input type="range" id="saltRounds" x-model.number="saltRounds" @change="generate" min="4" max="15" class="w-full">
+					<p class="text-xs text-zinc-500 mt-1">Higher rounds are more secure but take longer to generate.</p>
+				</div>
+				
+				<div>
+					<label for="expectedHash" class="block text-sm font-medium text-zinc-700 mb-2">Compare / Validate Hash (Optional)</label>
+					<input type="text" id="expectedHash" x-model="expectedHash" @input="validate" class="w-full px-3 py-2 border border-zinc-300 rounded-md shadow-sm focus:outline-none focus:ring-zinc-500 focus:border-zinc-500 sm:text-sm font-mono" placeholder="e.g. $2a$10$...">
+				</div>
+
+				<div x-show="showValidation" class="p-3 rounded-md text-sm font-medium" :class="validationClass" x-text="validationMessage" style="display: none;"></div>
+			</div>
+
+			<div class="space-y-4">
+				<div class="bg-zinc-50 p-4 border border-zinc-200 rounded-lg">
+					<div class="flex justify-between items-center mb-2">
+						<span class="text-xs font-bold text-zinc-500 uppercase tracking-wider">Generated Bcrypt Hash</span>
+						<button @click="copy" class="text-zinc-400 hover:text-zinc-800 text-xs font-medium" x-text="copied ? 'Copied!' : 'Copy'">Copy</button>
+					</div>
+					<div x-show="isGenerating" class="text-sm text-zinc-500">Generating hash...</div>
+					<div x-show="!isGenerating" class="text-sm font-mono text-zinc-900 break-all" x-text="generatedHash || 'No output'"></div>
+				</div>
+			</div>
+		</div>
+	</div>
+
+	<script>
+		import bcrypt from 'bcryptjs';
+
+		document.addEventListener('alpine:init', () => {
+			Alpine.data('bcryptApp', () => ({
+				inputText: '',
+				saltRounds: 10,
+				generatedHash: '',
+				expectedHash: '',
+				
+				showValidation: false,
+				validationMessage: '',
+				validationClass: '',
+				
+				copied: false,
+				isGenerating: false,
+				debounceTimer: null,
+
+				init() {
+					this.$watch('inputText', () => this.debouncedGenerate());
+				},
+
+				debouncedGenerate() {
+					clearTimeout(this.debounceTimer);
+					this.isGenerating = true;
+					this.debounceTimer = setTimeout(() => {
+						this.generate();
+					}, 300); // 300ms debounce
+				},
+
+				generate() {
+					if (!this.inputText) {
+						this.generatedHash = '';
+						this.isGenerating = false;
+						this.validate();
+						return;
+					}
+
+					try {
+						const salt = bcrypt.genSaltSync(this.saltRounds);
+						this.generatedHash = bcrypt.hashSync(this.inputText, salt);
+					} catch (e) {
+						console.error(e);
+						this.generatedHash = 'Error generating hash';
+					} finally {
+						this.isGenerating = false;
+						this.validate();
+					}
+				},
+
+				validate() {
+					const expected = this.expectedHash.trim();
+					if (!expected) {
+						this.showValidation = false;
+						return;
+					}
+
+					this.showValidation = true;
+
+					if (!this.inputText) {
+						this.validationClass = 'bg-zinc-100 text-zinc-700';
+						this.validationMessage = 'Please enter input text to validate.';
+						return;
+					}
+
+					try {
+						const match = bcrypt.compareSync(this.inputText, expected);
+						if (match) {
+							this.validationClass = 'bg-green-50 border border-green-200 text-green-700';
+							this.validationMessage = '✅ Plain text matches the Bcrypt hash!';
+						} else {
+							this.validationClass = 'bg-red-50 border border-red-200 text-red-700';
+							this.validationMessage = '❌ Plain text does NOT match the hash.';
+						}
+					} catch (e) {
+						this.validationClass = 'bg-red-50 border border-red-200 text-red-700';
+						this.validationMessage = '❌ Invalid Bcrypt hash format.';
+					}
+				},
+
+				copy() {
+					if (this.generatedHash && this.generatedHash !== 'Error generating hash') {
+						navigator.clipboard.writeText(this.generatedHash);
+						this.copied = true;
+						setTimeout(() => { this.copied = false; }, 2000);
+					}
+				}
+			}));
+		});
+	</script>
+</Layout>
