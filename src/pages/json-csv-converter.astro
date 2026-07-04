@@ -1,0 +1,121 @@
+---
+import Layout from '../layouts/Layout.astro';
+---
+
+<Layout 
+	title="JSON to CSV Converter"
+	description="Convert JSON arrays to CSV format, and CSV to JSON securely in your browser. Fast, accurate, and client-side only."
+	keywords="json to csv, csv to json, json csv converter, online csv tools, developer utilities, format converter"
+>
+	<div class="max-w-6xl" x-data="jsonCsvApp()">
+		<h1 class="text-2xl font-bold text-zinc-900 mb-2">JSON ⇄ CSV Converter</h1>
+		<p class="text-zinc-600 mb-8">Convert JSON data to CSV or CSV data to JSON quickly and accurately.</p>
+
+		<!-- Mode Switcher -->
+		<div class="flex space-x-2 mb-6 bg-zinc-100 p-1 rounded-lg w-max">
+			<button @click="setMode('json2csv')" :class="mode === 'json2csv' ? 'bg-white shadow-sm text-zinc-900' : 'text-zinc-600 hover:text-zinc-900'" class="px-4 py-2 text-sm font-medium rounded-md transition-all">
+				JSON to CSV
+			</button>
+			<button @click="setMode('csv2json')" :class="mode === 'csv2json' ? 'bg-white shadow-sm text-zinc-900' : 'text-zinc-600 hover:text-zinc-900'" class="px-4 py-2 text-sm font-medium rounded-md transition-all">
+				CSV to JSON
+			</button>
+		</div>
+
+		<div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+			<!-- Input Section -->
+			<div class="flex flex-col h-full">
+				<div class="flex justify-between items-center mb-2">
+					<label for="input" class="text-sm font-medium text-zinc-700" x-text="mode === 'json2csv' ? 'Input JSON Array' : 'Input CSV'"></label>
+					<div class="space-x-2">
+						<button @click="convert()" class="px-3 py-1.5 bg-zinc-900 text-white rounded text-xs font-medium hover:bg-zinc-800 transition-colors">Convert</button>
+						<button @click="clear()" class="px-3 py-1.5 border border-zinc-300 text-zinc-600 rounded text-xs font-medium hover:bg-zinc-50 transition-colors">Clear</button>
+					</div>
+				</div>
+				<textarea id="input" x-model="inputText" class="w-full flex-1 min-h-[400px] px-4 py-3 bg-zinc-50 border border-zinc-300 rounded-lg shadow-sm font-mono text-sm focus:outline-none focus:ring-1 focus:ring-zinc-500 focus:border-zinc-500 resize-y" :placeholder="mode === 'json2csv' ? '[\n  {\n    &#34;name&#34;: &#34;John&#34;,\n    &#34;age&#34;: 30\n  }\n]' : 'name,age\nJohn,30\nJane,25'"></textarea>
+				
+				<div x-show="errorMessage" class="mt-4 p-3 rounded-md text-sm font-medium bg-red-50 border border-red-200 text-red-700 break-words" x-text="errorMessage" style="display: none;"></div>
+			</div>
+
+			<!-- Output Section -->
+			<div class="flex flex-col h-full mt-8 lg:mt-0">
+				<div class="flex justify-between items-center mb-2">
+					<label for="output" class="text-sm font-medium text-zinc-700" x-text="mode === 'json2csv' ? 'Output CSV' : 'Output JSON'"></label>
+					<button @click="copy()" class="px-3 py-1.5 border border-zinc-300 text-zinc-600 rounded text-xs font-medium hover:bg-zinc-50 transition-colors" x-text="copied ? 'Copied!' : 'Copy to Clipboard'">Copy</button>
+				</div>
+				<textarea id="output" x-model="outputText" readonly class="w-full flex-1 min-h-[400px] px-4 py-3 bg-zinc-100 border border-zinc-300 rounded-lg shadow-sm font-mono text-sm focus:outline-none resize-y" placeholder="Result will appear here..."></textarea>
+			</div>
+		</div>
+	</div>
+
+	<script>
+		import Papa from 'papaparse';
+
+		document.addEventListener('alpine:init', () => {
+			Alpine.data('jsonCsvApp', () => ({
+				mode: 'json2csv',
+				inputText: '',
+				outputText: '',
+				errorMessage: '',
+				copied: false,
+
+				setMode(m) {
+					if (this.mode === m) return;
+					this.mode = m;
+					this.inputText = '';
+					this.outputText = '';
+					this.errorMessage = '';
+				},
+
+				convert() {
+					this.errorMessage = '';
+					if (!this.inputText.trim()) {
+						this.outputText = '';
+						return;
+					}
+
+					try {
+						if (this.mode === 'json2csv') {
+							// Parse JSON first
+							let data = JSON.parse(this.inputText);
+							// Papa.unparse expects an array of objects
+							if (!Array.isArray(data)) {
+								data = [data]; // wrap object in array if single object passed
+							}
+							const csv = Papa.unparse(data);
+							this.outputText = csv;
+						} else {
+							// CSV to JSON
+							Papa.parse(this.inputText, {
+								header: true,
+								skipEmptyLines: true,
+								complete: (results) => {
+									if (results.errors.length > 0) {
+										this.errorMessage = 'Warning: CSV parsed with errors. Check output.';
+									}
+									this.outputText = JSON.stringify(results.data, null, 2);
+								}
+							});
+						}
+					} catch (e) {
+						this.errorMessage = e.message || 'Failed to convert';
+						this.outputText = '';
+					}
+				},
+
+				clear() {
+					this.inputText = '';
+					this.outputText = '';
+					this.errorMessage = '';
+				},
+
+				copy() {
+					if (this.outputText) {
+						navigator.clipboard.writeText(this.outputText);
+						this.copied = true;
+						setTimeout(() => { this.copied = false; }, 2000);
+					}
+				}
+			}));
+		});
+	</script>
+</Layout>
