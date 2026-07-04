@@ -1,0 +1,29 @@
+---
+import Layout from '../layouts/Layout.astro';
+---
+
+<Layout 
+	title="Page Not Found"
+	description="The page you are looking for does not exist."
+>
+	<div class="flex flex-col items-center justify-center min-h-[60vh] text-center px-4">
+		<div class="mb-8">
+			<span class="text-9xl font-black text-zinc-200 block drop-shadow-sm">404</span>
+		</div>
+		
+		<h1 class="text-3xl font-bold text-zinc-900 mb-3 tracking-tight">Page not found</h1>
+		<p class="text-zinc-500 mb-8 max-w-md mx-auto text-lg">
+			Sorry, we couldn't find the page you're looking for. It might have been moved or deleted.
+		</p>
+		
+		<a 
+			href="/" 
+			class="inline-flex items-center justify-center px-6 py-3 border border-transparent text-base font-medium rounded-md text-white bg-zinc-900 hover:bg-zinc-800 transition-colors shadow-sm gap-2"
+		>
+			<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+				<path d="m15 18-6-6 6-6"/>
+			</svg>
+			Back to Tools
+		</a>
+	</div>
+</Layout>
