@@ -52,7 +52,15 @@ import Layout from '../layouts/Layout.astro';
 						<img :src="originalImageSrc" class="max-h-64 object-contain" alt="Original Image Preview">
 					</div>
 					
-					<div class="pt-2">
+					<div class="pt-2 space-y-3">
+						<div>
+							<label class="block text-sm font-medium text-zinc-700 mb-1">AI Model</label>
+							<select x-model="selectedModel" class="w-full px-3 py-2 border border-zinc-300 rounded-md text-sm focus:outline-none focus:ring-1 focus:ring-zinc-500 bg-white">
+								<option value="isnet_quint8">isnet_quint8 — Fastest, smallest (~10MB) ⚡</option>
+								<option value="isnet_fp16">isnet_fp16 — Balanced quality (~25MB) ⚖️</option>
+								<option value="isnet">isnet — Best quality, slowest (~50MB) 🏆</option>
+							</select>
+						</div>
 						<button @click="doRemoveBackground()" :disabled="!originalImageSrc || isProcessing" :class="(!originalImageSrc || isProcessing) ? 'opacity-50 cursor-not-allowed' : 'hover:bg-zinc-800'" class="w-full bg-zinc-900 text-white px-4 py-3 rounded-md text-sm font-medium transition-colors flex flex-col justify-center items-center">
 							<span x-show="!isProcessing">Remove Background</span>
 							<span x-show="isProcessing" class="flex items-center font-bold" style="display: none;">
@@ -96,6 +104,7 @@ import Layout from '../layouts/Layout.astro';
 				resultImageSrc: '',
 				isProcessing: false,
 				progressText: '',
+				selectedModel: 'isnet_quint8',
 
 				get downloadFilename() {
 					const baseName = this.originalFilename.replace(/\.[^/.]+$/, '');
@@ -132,7 +141,7 @@ import Layout from '../layouts/Layout.astro';
 						this.progressText = 'Initializing AI...';
 
 						const blob = await removeBackground(this.originalFileObject, {
-							model: 'isnet_quint8',
+							model: this.selectedModel,
 							progress: (key, current, total) => {
 								if (total > 0) {
 									const pct = Math.round((current / total) * 100);
