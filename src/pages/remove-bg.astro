@@ -1,0 +1,158 @@
+---
+import Layout from '../layouts/Layout.astro';
+---
+
+<Layout 
+	title="Remove Background"
+	description="Remove backgrounds from images instantly in your browser using AI. Free, secure, and fully client-side background removal."
+	keywords="remove bg, remove background, background remover online, transparent background, ai background removal, client side ai"
+>
+	<div class="max-w-6xl" x-data="removeBgApp()">
+		<h1 class="text-2xl font-bold text-zinc-900 mb-2">Remove Background</h1>
+		<p class="text-zinc-600 mb-8">Erase the background from your photos using AI, completely inside your browser. No images are uploaded to any server.</p>
+
+		<!-- Info alert -->
+		<div class="mb-6 bg-blue-50 border border-blue-200 text-blue-800 rounded-lg p-4 flex items-start">
+			<svg class="h-5 w-5 text-blue-600 mt-0.5 mr-3 flex-shrink-0" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+				<path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd" />
+			</svg>
+			<p class="text-sm">
+				<strong>Note:</strong> The first time you use this tool, the browser downloads the AI model (~10MB) and may freeze briefly while processing. This is normal — the result will appear once done.
+			</p>
+		</div>
+
+		<div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+			
+			<!-- Input Section -->
+			<div class="space-y-6">
+				<div class="space-y-4">
+					<label class="block text-sm font-medium text-zinc-700">Upload Original Image</label>
+					<div class="mt-1 flex justify-center px-6 pt-5 pb-6 border-2 border-zinc-300 border-dashed rounded-lg hover:bg-zinc-50 transition-colors relative">
+						<div class="space-y-1 text-center">
+							<svg class="mx-auto h-12 w-12 text-zinc-400" stroke="currentColor" fill="none" viewBox="0 0 48 48" aria-hidden="true">
+								<path d="M28 8H12a4 4 0 00-4 4v20m32-12v8m0 0v8a4 4 0 01-4 4H12a4 4 0 01-4-4v-4m32-4l-3.172-3.172a4 4 0 00-5.656 0L28 28M8 32l9.172-9.172a4 4 0 015.656 0L28 28m0 0l4 4m4-24h8m-4-4v8m-12 4h.02" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+							</svg>
+							<div class="flex text-sm text-zinc-600 justify-center">
+								<label for="file-upload" class="relative cursor-pointer bg-white rounded-md font-medium text-blue-600 hover:text-blue-500 focus-within:outline-none focus-within:ring-2 focus-within:ring-offset-2 focus-within:ring-blue-500">
+									<span>Upload a file</span>
+									<input id="file-upload" type="file" accept="image/*" class="sr-only" @change="handleFileUpload">
+								</label>
+								<p class="pl-1">or drag and drop</p>
+							</div>
+							<p class="text-xs text-zinc-500">PNG, JPG, WEBP up to 10MB</p>
+						</div>
+					</div>
+				</div>
+
+				<div x-show="originalImageSrc" style="display: none;" class="space-y-4 bg-zinc-50 p-4 border border-zinc-200 rounded-lg">
+					<div class="flex items-center justify-between">
+						<span class="text-sm font-medium text-zinc-700">Original Preview:</span>
+					</div>
+					<div class="flex justify-center bg-white border border-zinc-200 rounded p-2">
+						<img :src="originalImageSrc" class="max-h-64 object-contain" alt="Original Image Preview">
+					</div>
+					
+					<div class="pt-2">
+						<button @click="doRemoveBackground()" :disabled="!originalImageSrc || isProcessing" :class="(!originalImageSrc || isProcessing) ? 'opacity-50 cursor-not-allowed' : 'hover:bg-zinc-800'" class="w-full bg-zinc-900 text-white px-4 py-3 rounded-md text-sm font-medium transition-colors flex flex-col justify-center items-center">
+							<span x-show="!isProcessing">Remove Background</span>
+							<span x-show="isProcessing" class="flex items-center font-bold" style="display: none;">
+								<svg class="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+								AI is Processing...
+							</span>
+							<span x-show="isProcessing && progressText" class="text-xs font-normal text-zinc-300 mt-1" x-text="progressText" style="display: none;"></span>
+						</button>
+					</div>
+				</div>
+			</div>
+
+			<!-- Output Preview -->
+			<div class="space-y-6">
+				<div x-show="!resultImageSrc" class="bg-zinc-50 p-6 border border-zinc-200 rounded-lg flex flex-col items-center justify-center min-h-[400px]">
+					<div class="text-sm text-zinc-400">Result will appear here after AI processing.</div>
+				</div>
+
+				<div x-show="resultImageSrc" style="display: none;" class="space-y-4 bg-zinc-50 p-4 border border-zinc-200 rounded-lg">
+					<div class="flex items-center justify-between">
+						<span class="text-sm font-medium text-zinc-700">Result (Transparent PNG):</span>
+						<a :href="resultImageSrc" :download="downloadFilename" class="px-3 py-1.5 bg-blue-600 text-white rounded text-xs font-medium hover:bg-blue-700 transition-colors">
+							Download PNG
+						</a>
+					</div>
+					<!-- Checkered background for transparency preview -->
+					<div class="flex justify-center border border-zinc-200 rounded p-2 relative" style="background-image: linear-gradient(45deg, #e5e5e5 25%, transparent 25%), linear-gradient(-45deg, #e5e5e5 25%, transparent 25%), linear-gradient(45deg, transparent 75%, #e5e5e5 75%), linear-gradient(-45deg, transparent 75%, #e5e5e5 75%); background-size: 20px 20px; background-position: 0 0, 0 10px, 10px -10px, -10px 0px;">
+						<img :src="resultImageSrc" class="max-h-[400px] object-contain" alt="Background Removed Result">
+					</div>
+				</div>
+			</div>
+		</div>
+	</div>
+
+	<script is:inline>
+		document.addEventListener('alpine:init', () => {
+			Alpine.data('removeBgApp', () => ({
+				originalImageSrc: '',
+				originalFilename: 'image',
+				originalFileObject: null,
+				resultImageSrc: '',
+				isProcessing: false,
+				progressText: '',
+
+				get downloadFilename() {
+					const baseName = this.originalFilename.replace(/\.[^/.]+$/, '');
+					return `${baseName}-bg-removed.png`;
+				},
+
+				handleFileUpload(e) {
+					const file = e.target.files[0];
+					if (!file) return;
+					this.originalFilename = file.name;
+					this.originalFileObject = file;
+					const reader = new FileReader();
+					reader.onload = (event) => {
+						this.originalImageSrc = event.target.result;
+						if (this.resultImageSrc) {
+							URL.revokeObjectURL(this.resultImageSrc);
+							this.resultImageSrc = '';
+						}
+					};
+					reader.readAsDataURL(file);
+				},
+
+				async doRemoveBackground() {
+					if (!this.originalFileObject || this.isProcessing) return;
+					this.isProcessing = true;
+					this.resultImageSrc = '';
+					this.progressText = 'Loading AI library...';
+
+					try {
+						// +esm rewrites all bare imports (onnxruntime-web etc) to CDN URLs
+						// so everything resolves correctly in the browser without a bundler
+						const { removeBackground } = await import('https://cdn.jsdelivr.net/npm/@imgly/background-removal@1.7.0/+esm');
+
+						this.progressText = 'Initializing AI...';
+
+						const blob = await removeBackground(this.originalFileObject, {
+							model: 'isnet_quint8',
+							progress: (key, current, total) => {
+								if (total > 0) {
+									const pct = Math.round((current / total) * 100);
+									this.progressText = `Downloading models: ${pct}%`;
+								}
+							}
+						});
+
+						this.progressText = 'Finalizing...';
+						if (this.resultImageSrc) URL.revokeObjectURL(this.resultImageSrc);
+						this.resultImageSrc = URL.createObjectURL(blob);
+					} catch (err) {
+						console.error('Error removing background:', err);
+						alert('Failed to remove background: ' + err.message);
+					} finally {
+						this.isProcessing = false;
+						this.progressText = '';
+					}
+				}
+			}));
+		});
+	</script>
+</Layout>
