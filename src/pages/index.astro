@@ -4,88 +4,172 @@ import Layout from '../layouts/Layout.astro';
 
 <Layout 
 	title="Developer Utilities"
-	description="Free browser-based utilities for developers: QR generator, barcode maker, image tools, JSON formatter, UUID generator, and more. No uploads, fully private."
-	keywords="developer utilities, dev tools, qr code generator, barcode generator, qr reader, uuid generator, hash generator, json formatter, image tools, remove background, text template"
+	description="Free browser-based utilities for developers: QR generator, barcode maker, image tools, JSON formatter, UUID generator, word counter, and more. No uploads, fully private."
+	keywords="developer utilities, dev tools, qr code generator, barcode generator, qr reader, uuid generator, hash generator, json formatter, image tools, remove background, text template, word counter, character counter, reading time"
 >
-	<div class="max-w-2xl">
-		<h1 class="text-3xl font-bold text-zinc-900 mb-4">Developer Utilities</h1>
-		<p class="text-zinc-600 mb-8 leading-relaxed">
-			A collection of fast, browser-based tools for developers. Everything runs locally in your browser to ensure privacy and speed.
-		</p>
-		
-		<div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-			<a href="/remove-bg" class="block p-6 bg-zinc-50 border border-zinc-200 rounded-xl hover:border-zinc-400 hover:shadow-sm transition-all group">
-				<h3 class="font-semibold text-zinc-900 mb-1 group-hover:text-zinc-700">Remove Background</h3>
-				<p class="text-sm text-zinc-500">Erase the background from your photos using AI, securely in your browser.</p>
-			</a>
-			<a href="/image-converter" class="block p-6 bg-zinc-50 border border-zinc-200 rounded-xl hover:border-zinc-400 hover:shadow-sm transition-all group">
-				<h3 class="font-semibold text-zinc-900 mb-1 group-hover:text-zinc-700">Image Format Converter</h3>
-				<p class="text-sm text-zinc-500">Convert images between JPG, PNG, and WEBP formats directly in browser.</p>
-			</a>
-			<a href="/resize-image" class="block p-6 bg-zinc-50 border border-zinc-200 rounded-xl hover:border-zinc-400 hover:shadow-sm transition-all group">
-				<h3 class="font-semibold text-zinc-900 mb-1 group-hover:text-zinc-700">Image Resizer</h3>
-				<p class="text-sm text-zinc-500">Change the width and height dimensions of images while maintaining aspect ratio.</p>
-			</a>
-			<a href="/scale-image" class="block p-6 bg-zinc-50 border border-zinc-200 rounded-xl hover:border-zinc-400 hover:shadow-sm transition-all group">
-				<h3 class="font-semibold text-zinc-900 mb-1 group-hover:text-zinc-700">Image Scaler</h3>
-				<p class="text-sm text-zinc-500">Scale images up or down by percentage with a single click.</p>
-			</a>
-			<a href="/grayscale-image" class="block p-6 bg-zinc-50 border border-zinc-200 rounded-xl hover:border-zinc-400 hover:shadow-sm transition-all group">
-				<h3 class="font-semibold text-zinc-900 mb-1 group-hover:text-zinc-700">Grayscale Image</h3>
-				<p class="text-sm text-zinc-500">Apply a black and white (grayscale) filter to your photos instantly.</p>
-			</a>
-			<a href="/image-base64" class="block p-6 bg-zinc-50 border border-zinc-200 rounded-xl hover:border-zinc-400 hover:shadow-sm transition-all group">
-				<h3 class="font-semibold text-zinc-900 mb-1 group-hover:text-zinc-700">Image ⇄ Base64</h3>
-				<p class="text-sm text-zinc-500">Convert images to Base64 strings or decode Base64 back to an image.</p>
-			</a>
-			<a href="/random-string" class="block p-6 bg-zinc-50 border border-zinc-200 rounded-xl hover:border-zinc-400 hover:shadow-sm transition-all group">
-				<h3 class="font-semibold text-zinc-900 mb-1 group-hover:text-zinc-700">Random String Generator</h3>
-				<p class="text-sm text-zinc-500">Generate secure random strings for passwords, tokens, or keys.</p>
-			</a>
-			<a href="/uuid-generator" class="block p-6 bg-zinc-50 border border-zinc-200 rounded-xl hover:border-zinc-400 hover:shadow-sm transition-all group">
-				<h3 class="font-semibold text-zinc-900 mb-1 group-hover:text-zinc-700">UUID Generator</h3>
-				<p class="text-sm text-zinc-500">Generate universally unique identifiers (v4).</p>
-			</a>
-			<a href="/hash-generator" class="block p-6 bg-zinc-50 border border-zinc-200 rounded-xl hover:border-zinc-400 hover:shadow-sm transition-all group">
-				<h3 class="font-semibold text-zinc-900 mb-1 group-hover:text-zinc-700">Hash Generator & Validator</h3>
-				<p class="text-sm text-zinc-500">Compute SHA-1, SHA-256, SHA-384, SHA-512 hashes and validate hashes.</p>
-			</a>
-			<a href="/bcrypt-generator" class="block p-6 bg-zinc-50 border border-zinc-200 rounded-xl hover:border-zinc-400 hover:shadow-sm transition-all group">
-				<h3 class="font-semibold text-zinc-900 mb-1 group-hover:text-zinc-700">Bcrypt Generator</h3>
-				<p class="text-sm text-zinc-500">Generate and validate secure Bcrypt hashes with custom salt rounds.</p>
-			</a>
-			<a href="/json-formatter" class="block p-6 bg-zinc-50 border border-zinc-200 rounded-xl hover:border-zinc-400 hover:shadow-sm transition-all group">
-				<h3 class="font-semibold text-zinc-900 mb-1 group-hover:text-zinc-700">JSON Formatter</h3>
-				<p class="text-sm text-zinc-500">Format, prettify, and validate JSON data instantly.</p>
-			</a>
-			<a href="/timestamp-converter" class="block p-6 bg-zinc-50 border border-zinc-200 rounded-xl hover:border-zinc-400 hover:shadow-sm transition-all group">
-				<h3 class="font-semibold text-zinc-900 mb-1 group-hover:text-zinc-700">Timestamp Converter</h3>
-				<p class="text-sm text-zinc-500">Convert Unix timestamps to readable dates in Local and UTC time.</p>
-			</a>
-			<a href="/url-encode-decode" class="block p-6 bg-zinc-50 border border-zinc-200 rounded-xl hover:border-zinc-400 hover:shadow-sm transition-all group">
-				<h3 class="font-semibold text-zinc-900 mb-1 group-hover:text-zinc-700">URL Encode / Decode</h3>
-				<p class="text-sm text-zinc-500">Encode or decode URLs (Percent-encoding) securely in your browser.</p>
-			</a>
-			<a href="/text-template" class="block p-6 bg-zinc-50 border border-zinc-200 rounded-xl hover:border-zinc-400 hover:shadow-sm transition-all group">
-				<h3 class="font-semibold text-zinc-900 mb-1 group-hover:text-zinc-700">Text Template Editor</h3>
-				<p class="text-sm text-zinc-500">Create reusable templates with [variables], save locally, and generate personalized text instantly.</p>
-			</a>
-			<a href="/qr-generator" class="block p-6 bg-zinc-50 border border-zinc-200 rounded-xl hover:border-zinc-400 hover:shadow-sm transition-all group">
-				<h3 class="font-semibold text-zinc-900 mb-1 group-hover:text-zinc-700">QR Code Generator</h3>
-				<p class="text-sm text-zinc-500">Generate QR codes from any text or URL with custom colors and size. Download as PNG.</p>
-			</a>
-			<a href="/qr-reader" class="block p-6 bg-zinc-50 border border-zinc-200 rounded-xl hover:border-zinc-400 hover:shadow-sm transition-all group">
-				<h3 class="font-semibold text-zinc-900 mb-1 group-hover:text-zinc-700">QR Code Reader</h3>
-				<p class="text-sm text-zinc-500">Scan and decode QR codes from uploaded images or your device camera.</p>
-			</a>
-			<a href="/barcode-generator" class="block p-6 bg-zinc-50 border border-zinc-200 rounded-xl hover:border-zinc-400 hover:shadow-sm transition-all group">
-				<h3 class="font-semibold text-zinc-900 mb-1 group-hover:text-zinc-700">Barcode Generator</h3>
-				<p class="text-sm text-zinc-500">Generate barcodes in CODE128, EAN-13, UPC, CODE39, and more. Download PNG or SVG.</p>
-			</a>
-			<a href="/json-csv-converter" class="block p-6 bg-zinc-50 border border-zinc-200 rounded-xl hover:border-zinc-400 hover:shadow-sm transition-all group">
-				<h3 class="font-semibold text-zinc-900 mb-1 group-hover:text-zinc-700">JSON ⇄ CSV</h3>
-				<p class="text-sm text-zinc-500">Convert JSON arrays to CSV format, and CSV data back to JSON easily.</p>
-			</a>
+	<div x-data="indexSearch()" x-init="init()">
+		<div class="mb-8">
+			<h1 class="text-3xl font-bold text-zinc-900 mb-2">Developer Utilities</h1>
+			<p class="text-zinc-500 leading-relaxed mb-6">
+				A collection of fast, browser-based tools for developers. Everything runs locally in your browser to ensure privacy and speed.
+			</p>
+
+			<!-- Search bar -->
+			<div class="relative max-w-sm">
+				<svg xmlns="http://www.w3.org/2000/svg" class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400 pointer-events-none" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+					<circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
+				</svg>
+				<input
+					type="search"
+					id="index-search"
+					x-model="query"
+					@input="search()"
+					placeholder="Search tools…"
+					autocomplete="off"
+					class="w-full pl-10 pr-9 py-2.5 text-sm bg-zinc-50 border border-zinc-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-zinc-300 focus:bg-white placeholder-zinc-400 transition-all"
+				/>
+				<button
+					x-show="query.length > 0"
+					@click="query = ''; search();"
+					style="display:none;"
+					class="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-zinc-600"
+				>
+					<svg xmlns="http://www.w3.org/2000/svg" class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18M6 6l12 12"/></svg>
+				</button>
+			</div>
+		</div>
+
+		<!-- Search results -->
+		<div x-show="query.length > 0" style="display:none;">
+			<p class="text-sm text-zinc-500 mb-4">
+				<span x-text="results.length"></span> result<span x-show="results.length !== 1">s</span> for "<span class="font-medium text-zinc-700" x-text="query"></span>"
+			</p>
+			<template x-if="results.length === 0">
+				<div class="py-16 text-center text-zinc-400">
+					<svg xmlns="http://www.w3.org/2000/svg" class="mx-auto mb-3 w-10 h-10 text-zinc-300" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+						<circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
+					</svg>
+					<p class="text-sm">No tools found. Try a different keyword.</p>
+				</div>
+			</template>
+			<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+				<template x-for="item in results" :key="item.href">
+					<a :href="item.href" class="flex items-start gap-3 p-4 bg-zinc-50 border border-zinc-200 rounded-xl hover:border-zinc-400 hover:shadow-sm transition-all group">
+						<span class="text-xl leading-none mt-0.5 flex-shrink-0" x-text="item.icon"></span>
+						<div>
+							<h3 class="font-semibold text-zinc-900 text-sm mb-0.5 group-hover:text-zinc-700" x-text="item.label"></h3>
+							<p class="text-xs text-zinc-500" x-text="item.desc"></p>
+						</div>
+					</a>
+				</template>
+			</div>
+		</div>
+
+		<!-- Grouped tools (shown when not searching) -->
+		<div x-show="query.length === 0" class="space-y-10">
+			<template x-for="group in groups" :key="group.label">
+				<section>
+					<div class="flex items-center gap-2 mb-4">
+						<span class="text-lg leading-none" x-text="group.emoji"></span>
+						<h2 class="text-base font-bold text-zinc-900" x-text="group.label"></h2>
+						<span class="ml-auto text-xs text-zinc-400 font-medium" x-text="group.items.length + ' tools'"></span>
+					</div>
+					<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+						<template x-for="item in group.items" :key="item.href">
+							<a :href="item.href" class="flex items-start gap-3 p-4 bg-zinc-50 border border-zinc-200 rounded-xl hover:border-zinc-400 hover:shadow-sm transition-all group">
+								<span class="text-xl leading-none mt-0.5 flex-shrink-0" x-text="item.icon"></span>
+								<div>
+									<h3 class="font-semibold text-zinc-900 text-sm mb-0.5 group-hover:text-zinc-700" x-text="item.label"></h3>
+									<p class="text-xs text-zinc-500" x-text="item.desc"></p>
+								</div>
+							</a>
+						</template>
+					</div>
+				</section>
+			</template>
 		</div>
 	</div>
+
+	<script is:inline>
+		document.addEventListener('alpine:init', () => {
+			Alpine.data('indexSearch', () => ({
+				query: '',
+				results: [],
+				groups: [
+					{
+						emoji: '🖼️',
+						label: 'Images & Assets',
+						items: [
+							{ href: '/remove-bg',        icon: '🪄', label: 'Remove Background',    desc: 'Erase image backgrounds using AI, fully in your browser.', tags: 'ai background remove erase photo' },
+							{ href: '/image-converter',  icon: '🔄', label: 'Image Converter',       desc: 'Convert images between JPG, PNG, and WEBP formats.', tags: 'convert jpg png webp format' },
+							{ href: '/resize-image',     icon: '📐', label: 'Image Resizer',         desc: 'Resize images to specific pixel dimensions with aspect ratio lock.', tags: 'resize dimensions width height' },
+							{ href: '/scale-image',      icon: '🔍', label: 'Image Scaler',          desc: 'Scale images up or down by percentage with live preview.', tags: 'scale percentage zoom' },
+							{ href: '/grayscale-image',  icon: '⬛', label: 'Grayscale Image',       desc: 'Apply a black and white grayscale filter to your photos.', tags: 'grayscale black white filter' },
+							{ href: '/image-base64',     icon: '📦', label: 'Image ⇄ Base64',        desc: 'Convert images to Base64 strings or decode Base64 back.', tags: 'base64 encode decode image' },
+							{ href: '/trim-image',       icon: '✂️', label: 'Trim Image Padding',    desc: 'Remove transparent or solid-color padding and whitespace from images.', tags: 'trim crop whitespace padding transparent border remove' },
+						],
+					},
+					{
+						emoji: '📝',
+						label: 'Text Tools',
+						items: [
+							{ href: '/word-counter',       icon: '🔢', label: 'Word Counter',          desc: 'Count words, characters, sentences, paragraphs, and estimate reading time.', tags: 'word count character sentence paragraph reading time speaking' },
+							{ href: '/text-template',      icon: '📋', label: 'Text Template Editor',  desc: 'Create reusable templates with [variables], saved locally.', tags: 'template variable placeholder text editor' },
+							{ href: '/url-encode-decode',  icon: '🔗', label: 'URL Encode / Decode',   desc: 'Encode or decode URLs (percent-encoding) in your browser.', tags: 'url encode decode percent encoding' },
+						],
+					},
+					{
+						emoji: '📦',
+						label: 'Data & Format',
+						items: [
+							{ href: '/json-formatter',     icon: '{ }', label: 'JSON Formatter',       desc: 'Format, prettify, minify, and validate JSON data instantly.', tags: 'json format prettify validate minify' },
+							{ href: '/json-csv-converter', icon: '📊',  label: 'JSON ⇄ CSV',           desc: 'Convert JSON arrays to CSV format and back easily.', tags: 'json csv convert table data' },
+							{ href: '/timestamp-converter',icon: '🕐',  label: 'Timestamp Converter',  desc: 'Convert Unix timestamps to readable dates in UTC & local time.', tags: 'unix timestamp date time convert utc' },
+						],
+					},
+					{
+						emoji: '🔐',
+						label: 'Security',
+						items: [
+							{ href: '/hash-generator',   icon: '#️⃣', label: 'Hash Gen & Validator',   desc: 'Compute SHA-1, SHA-256, SHA-512 hashes and validate them.', tags: 'hash sha md5 sha256 validate checksum' },
+							{ href: '/bcrypt-generator', icon: '🔒',  label: 'Bcrypt Generator',       desc: 'Generate and validate Bcrypt hashes with custom salt rounds.', tags: 'bcrypt hash password salt rounds' },
+						],
+					},
+					{
+						emoji: '⚙️',
+						label: 'Generators',
+						items: [
+							{ href: '/random-string',  icon: '🎲', label: 'Random String Generator', desc: 'Generate secure random strings for passwords, tokens, or keys.', tags: 'random string password token key generate' },
+							{ href: '/uuid-generator', icon: '🆔', label: 'UUID Generator',           desc: 'Generate universally unique identifiers (v4).', tags: 'uuid guid v4 unique identifier' },
+						],
+					},
+					{
+						emoji: '📷',
+						label: 'QR & Barcode',
+						items: [
+							{ href: '/qr-generator',      icon: '⬛', label: 'QR Code Generator',    desc: 'Generate QR codes from any text or URL. Download as PNG.', tags: 'qr code generate url text download' },
+							{ href: '/qr-reader',         icon: '📷', label: 'QR Code Reader',        desc: 'Scan and decode QR codes from uploaded images or camera.', tags: 'qr code scan read decode camera upload' },
+							{ href: '/barcode-generator', icon: '▐▌', label: 'Barcode Generator',     desc: 'Generate CODE128, EAN-13, UPC barcodes. Download PNG or SVG.', tags: 'barcode code128 ean upc generate' },
+						],
+					},
+				],
+
+				get allItems() {
+					return this.groups.flatMap(g => g.items.map(item => ({ ...item, group: g.label })));
+				},
+
+				init() {},
+
+				search() {
+					const q = this.query.trim().toLowerCase();
+					if (!q) { this.results = []; return; }
+					this.results = this.allItems.filter(item =>
+						item.label.toLowerCase().includes(q) ||
+						item.desc.toLowerCase().includes(q) ||
+						(item.tags && item.tags.toLowerCase().includes(q))
+					);
+				},
+			}));
+		});
+	</script>
 </Layout>

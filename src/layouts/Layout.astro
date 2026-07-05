@@ -68,32 +68,163 @@ const {
 		</header>
 		
 		<div class="flex-1 max-w-7xl mx-auto w-full flex flex-col md:flex-row">
-			<aside class="w-full md:w-64 border-r border-zinc-200 bg-zinc-50/50 p-6">
-				<nav class="space-y-1">
-					<p class="text-xs font-semibold text-zinc-400 uppercase tracking-wider mb-3">Utilities</p>
-					<a href="/remove-bg" class="block px-3 py-2 text-sm font-medium rounded-md hover:bg-zinc-100 hover:text-zinc-900 text-zinc-600 transition-colors">Remove Background</a>
-					<a href="/image-converter" class="block px-3 py-2 text-sm font-medium rounded-md hover:bg-zinc-100 hover:text-zinc-900 text-zinc-600 transition-colors">Image Converter</a>
-					<a href="/resize-image" class="block px-3 py-2 text-sm font-medium rounded-md hover:bg-zinc-100 hover:text-zinc-900 text-zinc-600 transition-colors">Resize Image</a>
-					<a href="/scale-image" class="block px-3 py-2 text-sm font-medium rounded-md hover:bg-zinc-100 hover:text-zinc-900 text-zinc-600 transition-colors">Scale Image</a>
-					<a href="/grayscale-image" class="block px-3 py-2 text-sm font-medium rounded-md hover:bg-zinc-100 hover:text-zinc-900 text-zinc-600 transition-colors">Grayscale Image</a>
-					<a href="/image-base64" class="block px-3 py-2 text-sm font-medium rounded-md hover:bg-zinc-100 hover:text-zinc-900 text-zinc-600 transition-colors">Image Base64</a>
-					<a href="/random-string" class="block px-3 py-2 text-sm font-medium rounded-md hover:bg-zinc-100 hover:text-zinc-900 text-zinc-600 transition-colors">Random String</a>
-					<a href="/uuid-generator" class="block px-3 py-2 text-sm font-medium rounded-md hover:bg-zinc-100 hover:text-zinc-900 text-zinc-600 transition-colors">UUID Generator</a>
-					<a href="/hash-generator" class="block px-3 py-2 text-sm font-medium rounded-md hover:bg-zinc-100 hover:text-zinc-900 text-zinc-600 transition-colors">Hash Gen & Validate</a>
-					<a href="/bcrypt-generator" class="block px-3 py-2 text-sm font-medium rounded-md hover:bg-zinc-100 hover:text-zinc-900 text-zinc-600 transition-colors">Bcrypt Generator</a>
-					<a href="/json-formatter" class="block px-3 py-2 text-sm font-medium rounded-md hover:bg-zinc-100 hover:text-zinc-900 text-zinc-600 transition-colors">JSON Formatter</a>
-					<a href="/json-csv-converter" class="block px-3 py-2 text-sm font-medium rounded-md hover:bg-zinc-100 hover:text-zinc-900 text-zinc-600 transition-colors">JSON ⇄ CSV</a>
-					<a href="/timestamp-converter" class="block px-3 py-2 text-sm font-medium rounded-md hover:bg-zinc-100 hover:text-zinc-900 text-zinc-600 transition-colors">Timestamp Converter</a>
-					<a href="/url-encode-decode" class="block px-3 py-2 text-sm font-medium rounded-md hover:bg-zinc-100 hover:text-zinc-900 text-zinc-600 transition-colors">URL Encode / Decode</a>
-					<a href="/text-template" class="block px-3 py-2 text-sm font-medium rounded-md hover:bg-zinc-100 hover:text-zinc-900 text-zinc-600 transition-colors">Text Template</a>
-					<a href="/qr-generator" class="block px-3 py-2 text-sm font-medium rounded-md hover:bg-zinc-100 hover:text-zinc-900 text-zinc-600 transition-colors">QR Generator</a>
-					<a href="/qr-reader" class="block px-3 py-2 text-sm font-medium rounded-md hover:bg-zinc-100 hover:text-zinc-900 text-zinc-600 transition-colors">QR Reader</a>
-					<a href="/barcode-generator" class="block px-3 py-2 text-sm font-medium rounded-md hover:bg-zinc-100 hover:text-zinc-900 text-zinc-600 transition-colors">Barcode Generator</a>
+			<aside class="w-full md:w-64 border-r border-zinc-200 bg-zinc-50/50 flex-shrink-0" x-data="sidebarSearch()" x-init="init()">
+
+				<!-- Search -->
+				<div class="p-4 border-b border-zinc-200">
+					<div class="relative">
+						<svg xmlns="http://www.w3.org/2000/svg" class="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-zinc-400 pointer-events-none" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+							<circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
+						</svg>
+						<input
+							type="search"
+							id="sidebar-search"
+							x-model="query"
+							@input="search()"
+							placeholder="Search tools..."
+							autocomplete="off"
+							class="w-full pl-8 pr-3 py-2 text-sm bg-white border border-zinc-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-zinc-300 focus:border-transparent placeholder-zinc-400 transition-all"
+						/>
+						<button
+							x-show="query.length > 0"
+							@click="query = ''; search();"
+							style="display:none;"
+							class="absolute right-2.5 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-zinc-600"
+						>
+							<svg xmlns="http://www.w3.org/2000/svg" class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18M6 6l12 12"/></svg>
+						</button>
+					</div>
+				</div>
+
+				<!-- Nav content -->
+				<nav class="p-3 space-y-1 overflow-y-auto" style="max-height: calc(100vh - 130px);">
+
+					<!-- Search results (flat list, shown only when searching) -->
+					<div x-show="query.length > 0" style="display:none;">
+						<p class="text-xs font-semibold text-zinc-400 uppercase tracking-wider px-2 py-1 mb-1">
+							Results (<span x-text="results.length"></span>)
+						</p>
+						<template x-if="results.length === 0">
+							<p class="text-xs text-zinc-400 italic px-2 py-3">No tools found.</p>
+						</template>
+						<template x-for="item in results" :key="item.href">
+							<a
+								:href="item.href"
+								class="flex items-center gap-2 px-3 py-2 text-sm font-medium rounded-lg hover:bg-zinc-100 hover:text-zinc-900 text-zinc-600 transition-colors"
+							>
+								<span class="text-base leading-none" x-text="item.icon"></span>
+								<span x-text="item.label"></span>
+							</a>
+						</template>
+					</div>
+
+					<!-- Grouped nav (shown when not searching) -->
+					<div x-show="query.length === 0">
+						<template x-for="group in groups" :key="group.label">
+							<div class="mb-3">
+								<p class="text-xs font-semibold text-zinc-400 uppercase tracking-wider px-2 py-1 mb-0.5 flex items-center gap-1.5">
+									<span x-text="group.emoji"></span>
+									<span x-text="group.label"></span>
+								</p>
+								<template x-for="item in group.items" :key="item.href">
+									<a
+										:href="item.href"
+										class="block px-3 py-2 text-sm font-medium rounded-lg hover:bg-zinc-100 hover:text-zinc-900 text-zinc-600 transition-colors"
+										x-text="item.label"
+									></a>
+								</template>
+							</div>
+						</template>
+					</div>
+
 				</nav>
 			</aside>
+
 			<main class="flex-1 p-6 md:p-10 bg-white">
 				<slot />
 			</main>
 		</div>
+
+		<script is:inline>
+			document.addEventListener('alpine:init', () => {
+				Alpine.data('sidebarSearch', () => ({
+					query: '',
+					results: [],
+					groups: [
+						{
+							emoji: '🖼️',
+							label: 'Images & Assets',
+							items: [
+								{ href: '/remove-bg',       label: 'Remove Background',    icon: '🪄', tags: 'ai background remove erase photo' },
+								{ href: '/image-converter', label: 'Image Converter',       icon: '🔄', tags: 'convert jpg png webp format' },
+								{ href: '/resize-image',    label: 'Resize Image',          icon: '📐', tags: 'resize dimensions width height' },
+								{ href: '/scale-image',     label: 'Scale Image',           icon: '🔍', tags: 'scale percentage zoom' },
+								{ href: '/grayscale-image', label: 'Grayscale Image',       icon: '⬛', tags: 'grayscale black white filter' },
+								{ href: '/image-base64',    label: 'Image ⇄ Base64',        icon: '📦', tags: 'base64 encode decode image' },
+								{ href: '/trim-image',      label: 'Trim Image Padding',    icon: '✂️', tags: 'trim crop whitespace padding transparent border remove' },
+							],
+						},
+						{
+							emoji: '📝',
+							label: 'Text Tools',
+							items: [
+								{ href: '/word-counter',    label: 'Word Counter',          icon: '🔢', tags: 'word count character sentence paragraph reading time' },
+								{ href: '/text-template',   label: 'Text Template',         icon: '📋', tags: 'template variable placeholder text editor' },
+								{ href: '/url-encode-decode', label: 'URL Encode / Decode', icon: '🔗', tags: 'url encode decode percent encoding' },
+							],
+						},
+						{
+							emoji: '📦',
+							label: 'Data & Format',
+							items: [
+								{ href: '/json-formatter',    label: 'JSON Formatter',      icon: '{ }', tags: 'json format prettify validate minify' },
+								{ href: '/json-csv-converter', label: 'JSON ⇄ CSV',         icon: '📊', tags: 'json csv convert table data' },
+								{ href: '/timestamp-converter', label: 'Timestamp Converter', icon: '🕐', tags: 'unix timestamp date time convert utc' },
+							],
+						},
+						{
+							emoji: '🔐',
+							label: 'Security',
+							items: [
+								{ href: '/hash-generator',  label: 'Hash Gen & Validate',  icon: '#️⃣', tags: 'hash sha md5 sha256 validate checksum' },
+								{ href: '/bcrypt-generator', label: 'Bcrypt Generator',     icon: '🔒', tags: 'bcrypt hash password salt rounds' },
+							],
+						},
+						{
+							emoji: '⚙️',
+							label: 'Generators',
+							items: [
+								{ href: '/random-string',  label: 'Random String',          icon: '🎲', tags: 'random string password token key generate' },
+								{ href: '/uuid-generator', label: 'UUID Generator',          icon: '🆔', tags: 'uuid guid v4 unique identifier' },
+							],
+						},
+						{
+							emoji: '📷',
+							label: 'QR & Barcode',
+							items: [
+								{ href: '/qr-generator',     label: 'QR Generator',         icon: '⬛', tags: 'qr code generate url text download' },
+								{ href: '/qr-reader',        label: 'QR Reader',             icon: '📷', tags: 'qr code scan read decode camera upload' },
+								{ href: '/barcode-generator', label: 'Barcode Generator',   icon: '▐▌', tags: 'barcode code128 ean upc generate' },
+							],
+						},
+					],
+
+					get allItems() {
+						return this.groups.flatMap(g => g.items.map(item => ({ ...item, group: g.label })));
+					},
+
+					init() {},
+
+					search() {
+						const q = this.query.trim().toLowerCase();
+						if (!q) { this.results = []; return; }
+						this.results = this.allItems.filter(item =>
+							item.label.toLowerCase().includes(q) ||
+							(item.tags && item.tags.toLowerCase().includes(q))
+						);
+					},
+				}));
+			});
+		</script>
 	</body>
 </html>

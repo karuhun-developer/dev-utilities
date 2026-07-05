@@ -1,0 +1,472 @@
+---
+import Layout from '../layouts/Layout.astro';
+---
+
+<Layout
+	title="Trim Image Padding"
+	description="Remove transparent or solid-color padding and whitespace from images online. Auto-detect background color and crop to content with adjustable tolerance. Free, runs in your browser."
+	keywords="trim image, remove image padding, crop whitespace, remove transparent border, image trim online, auto crop image, remove white background border"
+>
+	<div class="max-w-5xl" x-data="trimImageApp()" x-init="init()">
+		<h1 class="text-2xl font-bold text-zinc-900 mb-2">Trim Image Padding</h1>
+		<p class="text-zinc-600 mb-8">Remove transparent or solid-color padding and empty space around your image. Crop is done entirely in your browser — nothing is uploaded.</p>
+
+		<div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+
+			<!-- LEFT: Upload + Settings -->
+			<div class="space-y-5">
+
+				<!-- Drop zone -->
+				<div>
+					<label class="block text-sm font-medium text-zinc-700 mb-2">Upload Image</label>
+					<div
+						class="relative flex flex-col items-center justify-center border-2 border-dashed rounded-xl p-8 text-center transition-colors cursor-pointer"
+						:class="isDragging ? 'border-zinc-500 bg-zinc-100' : 'border-zinc-300 bg-zinc-50 hover:bg-zinc-100 hover:border-zinc-400'"
+						@dragover.prevent="isDragging = true"
+						@dragleave.prevent="isDragging = false"
+						@drop.prevent="onDrop($event)"
+						@click="$refs.fileInput.click()"
+					>
+						<svg xmlns="http://www.w3.org/2000/svg" class="w-10 h-10 text-zinc-300 mb-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+							<rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/>
+						</svg>
+						<p class="text-sm font-medium text-zinc-600">Drop an image here or <span class="text-zinc-900 underline underline-offset-2">browse</span></p>
+						<p class="text-xs text-zinc-400 mt-1">PNG, JPG, WEBP, GIF — recommended PNG for transparent images</p>
+						<input
+							type="file"
+							accept="image/*"
+							class="sr-only"
+							x-ref="fileInput"
+							@change="onFileChange($event)"
+						/>
+					</div>
+				</div>
+
+				<!-- Settings (shown after upload) -->
+				<div x-show="originalSrc" style="display:none;" class="space-y-4 bg-white border border-zinc-200 rounded-xl p-5">
+
+					<!-- Trim mode -->
+					<div>
+						<label class="block text-sm font-medium text-zinc-700 mb-2">Trim Mode</label>
+						<div class="grid grid-cols-2 gap-2">
+							<button
+								@click="trimMode = 'transparent'"
+								:class="trimMode === 'transparent' ? 'bg-zinc-900 text-white border-zinc-900' : 'bg-white text-zinc-600 border-zinc-200 hover:border-zinc-400'"
+								class="px-3 py-2.5 rounded-lg border text-sm font-medium transition-all flex items-center justify-center gap-2"
+							>
+								<svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3h18v18H3z" opacity=".3"/><path d="M9 3v18M15 3v18M3 9h18M3 15h18"/></svg>
+								Transparent
+							</button>
+							<button
+								@click="trimMode = 'color'"
+								:class="trimMode === 'color' ? 'bg-zinc-900 text-white border-zinc-900' : 'bg-white text-zinc-600 border-zinc-200 hover:border-zinc-400'"
+								class="px-3 py-2.5 rounded-lg border text-sm font-medium transition-all flex items-center justify-center gap-2"
+							>
+								<svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="13.5" cy="6.5" r=".5" fill="currentColor"/><circle cx="17.5" cy="10.5" r=".5" fill="currentColor"/><circle cx="8.5" cy="7.5" r=".5" fill="currentColor"/><circle cx="6.5" cy="12.5" r=".5" fill="currentColor"/><path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10c.926 0 1.648-.746 1.648-1.688 0-.437-.18-.835-.437-1.125-.29-.289-.438-.652-.438-1.125a1.64 1.64 0 0 1 1.668-1.668h1.996c3.051 0 5.555-2.503 5.555-5.554C21.965 6.012 17.461 2 12 2z"/></svg>
+								Solid Color
+							</button>
+						</div>
+					</div>
+
+					<!-- Color picker (for color mode) -->
+					<div x-show="trimMode === 'color'" class="space-y-3">
+						<div class="flex items-center gap-3">
+							<div>
+								<label class="block text-xs font-medium text-zinc-600 mb-1">Background Color</label>
+								<div class="flex items-center gap-2">
+									<input
+										type="color"
+										x-model="trimColor"
+										class="w-9 h-9 rounded border border-zinc-300 cursor-pointer p-0.5 bg-white"
+										title="Pick background color to trim"
+									/>
+									<span class="text-xs font-mono text-zinc-500" x-text="trimColor"></span>
+									<button
+										@click="sampleCornerColor()"
+										class="text-xs bg-zinc-100 hover:bg-zinc-200 border border-zinc-200 text-zinc-700 px-2.5 py-1.5 rounded-lg transition-colors font-medium"
+										title="Auto-pick color from image corner"
+									>
+										Auto-detect
+									</button>
+								</div>
+							</div>
+						</div>
+
+						<!-- Tolerance -->
+						<div>
+							<div class="flex items-center justify-between mb-1">
+								<label class="text-xs font-medium text-zinc-600">Tolerance</label>
+								<span class="text-xs font-mono text-zinc-500" x-text="tolerance"></span>
+							</div>
+							<input
+								type="range"
+								x-model.number="tolerance"
+								min="0" max="128" step="1"
+								class="w-full accent-zinc-900"
+							/>
+							<div class="flex justify-between text-xs text-zinc-400 mt-0.5">
+								<span>Exact match</span>
+								<span>Loose</span>
+							</div>
+						</div>
+					</div>
+
+					<!-- Alpha threshold (for transparent mode) -->
+					<div x-show="trimMode === 'transparent'" class="space-y-2">
+						<div class="flex items-center justify-between">
+							<label class="text-xs font-medium text-zinc-600">Alpha threshold</label>
+							<span class="text-xs font-mono text-zinc-500" x-text="alphaThreshold"></span>
+						</div>
+						<input
+							type="range"
+							x-model.number="alphaThreshold"
+							min="0" max="255" step="1"
+							class="w-full accent-zinc-900"
+						/>
+						<p class="text-xs text-zinc-400">Pixels with alpha ≤ this value are treated as transparent padding.</p>
+					</div>
+
+					<!-- Padding -->
+					<div>
+						<div class="flex items-center justify-between mb-1">
+							<label class="text-xs font-medium text-zinc-600">Add extra padding (px)</label>
+							<span class="text-xs font-mono text-zinc-500" x-text="extraPadding + 'px'"></span>
+						</div>
+						<input
+							type="range"
+							x-model.number="extraPadding"
+							min="0" max="64" step="1"
+							class="w-full accent-zinc-900"
+						/>
+					</div>
+
+					<!-- Format -->
+					<div>
+						<label class="block text-xs font-medium text-zinc-600 mb-2">Output Format</label>
+						<div class="flex gap-2">
+							<template x-for="fmt in ['png','jpg','webp']" :key="fmt">
+								<button
+									@click="outputFormat = fmt"
+									:class="outputFormat === fmt ? 'bg-zinc-900 text-white border-zinc-900' : 'bg-white text-zinc-500 border-zinc-200 hover:border-zinc-400'"
+									class="flex-1 py-1.5 rounded-lg border text-xs font-semibold uppercase tracking-wide transition-all"
+									x-text="fmt"
+								></button>
+							</template>
+						</div>
+					</div>
+
+					<!-- Trim button -->
+					<button
+						@click="trim()"
+						:disabled="isProcessing"
+						:class="isProcessing ? 'opacity-60 cursor-not-allowed' : 'hover:bg-zinc-800'"
+						class="w-full bg-zinc-900 text-white py-2.5 rounded-xl text-sm font-semibold transition-colors flex items-center justify-center gap-2"
+					>
+						<template x-if="!isProcessing">
+							<span class="flex items-center gap-2">
+								<svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M6 2v4M18 2v4M6 18v4M18 18v4M2 6h4M18 6h4M2 18h4M18 18h4"/><rect x="6" y="6" width="12" height="12" rx="1"/></svg>
+								Trim Padding
+							</span>
+						</template>
+						<template x-if="isProcessing">
+							<span class="flex items-center gap-2">
+								<svg class="animate-spin w-4 h-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+								Processing…
+							</span>
+						</template>
+					</button>
+
+					<!-- Error -->
+					<div x-show="error" style="display:none;" class="text-xs text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2" x-text="error"></div>
+				</div>
+			</div>
+
+			<!-- RIGHT: Preview -->
+			<div class="space-y-4">
+
+				<!-- Before / After tabs -->
+				<div x-show="originalSrc" style="display:none;" class="flex items-center gap-2">
+					<button
+						@click="previewTab = 'original'"
+						:class="previewTab === 'original' ? 'bg-zinc-900 text-white' : 'bg-white text-zinc-600 border border-zinc-200 hover:border-zinc-400'"
+						class="px-4 py-1.5 rounded-lg text-xs font-semibold transition-all"
+					>Original</button>
+					<button
+						@click="previewTab = 'result'"
+						:disabled="!resultSrc"
+						:class="[previewTab === 'result' ? 'bg-zinc-900 text-white' : 'bg-white text-zinc-600 border border-zinc-200 hover:border-zinc-400', !resultSrc ? 'opacity-40 cursor-not-allowed' : '']"
+						class="px-4 py-1.5 rounded-lg text-xs font-semibold transition-all"
+					>Trimmed</button>
+				</div>
+
+				<!-- Preview area -->
+				<div
+					class="rounded-xl border border-zinc-200 overflow-hidden flex items-center justify-center min-h-72 relative"
+					style="background-image: linear-gradient(45deg, #e4e4e7 25%, transparent 25%), linear-gradient(-45deg, #e4e4e7 25%, transparent 25%), linear-gradient(45deg, transparent 75%, #e4e4e7 75%), linear-gradient(-45deg, transparent 75%, #e4e4e7 75%); background-size: 16px 16px; background-position: 0 0, 0 8px, 8px -8px, -8px 0px; background-color: #f4f4f5;"
+				>
+					<!-- Empty state -->
+					<div x-show="!originalSrc" class="text-center p-10">
+						<svg xmlns="http://www.w3.org/2000/svg" class="mx-auto mb-3 w-12 h-12 text-zinc-300" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+							<rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/>
+						</svg>
+						<p class="text-sm text-zinc-400">Upload an image to preview</p>
+					</div>
+
+					<!-- Original -->
+					<img
+						x-show="originalSrc && previewTab === 'original'"
+						style="display:none;"
+						:src="originalSrc"
+						alt="Original"
+						class="max-w-full max-h-96 object-contain p-3"
+					/>
+
+					<!-- Result -->
+					<img
+						x-show="resultSrc && previewTab === 'result'"
+						style="display:none;"
+						:src="resultSrc"
+						alt="Trimmed"
+						class="max-w-full max-h-96 object-contain p-3"
+					/>
+
+					<!-- Placeholder for result tab when no result yet -->
+					<div x-show="!resultSrc && previewTab === 'result'" class="text-center p-10">
+						<p class="text-sm text-zinc-400">Click "Trim Padding" to see result</p>
+					</div>
+				</div>
+
+				<!-- Stats -->
+				<div x-show="resultSrc" style="display:none;" class="grid grid-cols-2 gap-3">
+					<div class="bg-zinc-50 border border-zinc-200 rounded-xl p-4">
+						<p class="text-xs font-semibold text-zinc-400 uppercase tracking-wider mb-1">Before</p>
+						<p class="text-lg font-bold text-zinc-900" x-text="stats.originalW + ' × ' + stats.originalH"></p>
+						<p class="text-xs text-zinc-400">pixels</p>
+					</div>
+					<div class="bg-zinc-50 border border-zinc-200 rounded-xl p-4">
+						<p class="text-xs font-semibold text-zinc-400 uppercase tracking-wider mb-1">After</p>
+						<p class="text-lg font-bold text-zinc-900" x-text="stats.trimmedW + ' × ' + stats.trimmedH"></p>
+						<p class="text-xs text-zinc-400" x-text="'–' + stats.savedPct + '% size'"></p>
+					</div>
+					<div class="col-span-2 bg-zinc-50 border border-zinc-200 rounded-xl p-4 flex items-center justify-between">
+						<div>
+							<p class="text-xs font-semibold text-zinc-400 uppercase tracking-wider mb-0.5">Removed padding</p>
+							<p class="text-sm text-zinc-700 font-medium" x-text="`Top ${stats.top}px · Right ${stats.right}px · Bottom ${stats.bottom}px · Left ${stats.left}px`"></p>
+						</div>
+						<a
+							:href="resultSrc"
+							:download="downloadName"
+							class="flex items-center gap-2 bg-zinc-900 hover:bg-zinc-700 text-white text-sm font-semibold px-4 py-2 rounded-xl transition-colors flex-shrink-0"
+						>
+							<svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+							Download
+						</a>
+					</div>
+				</div>
+			</div>
+		</div>
+
+		<!-- Hidden canvas -->
+		<canvas id="trimCanvas" style="display:none;"></canvas>
+	</div>
+
+	<script is:inline>
+		document.addEventListener('alpine:init', () => {
+			Alpine.data('trimImageApp', () => ({
+				originalSrc: '',
+				originalFilename: 'image',
+				resultSrc: '',
+				isDragging: false,
+				isProcessing: false,
+				trimMode: 'transparent',
+				trimColor: '#ffffff',
+				tolerance: 30,
+				alphaThreshold: 10,
+				extraPadding: 0,
+				outputFormat: 'png',
+				previewTab: 'original',
+				error: '',
+				stats: { originalW: 0, originalH: 0, trimmedW: 0, trimmedH: 0, savedPct: 0, top: 0, right: 0, bottom: 0, left: 0 },
+
+				get downloadName() {
+					const base = this.originalFilename.replace(/\.[^/.]+$/, '');
+					return `${base}-trimmed.${this.outputFormat}`;
+				},
+
+				init() {},
+
+				onFileChange(e) {
+					const file = e.target.files[0];
+					if (file) this.loadFile(file);
+				},
+
+				onDrop(e) {
+					this.isDragging = false;
+					const file = e.dataTransfer.files[0];
+					if (file && file.type.startsWith('image/')) this.loadFile(file);
+				},
+
+				loadFile(file) {
+					this.originalFilename = file.name;
+					// Default format to PNG so transparency is preserved
+					this.outputFormat = file.type === 'image/jpeg' ? 'jpg' : file.type === 'image/webp' ? 'webp' : 'png';
+					this.resultSrc = '';
+					this.previewTab = 'original';
+					this.error = '';
+					const reader = new FileReader();
+					reader.onload = (ev) => {
+						this.originalSrc = ev.target.result;
+						// Auto-detect corner color for color mode
+						this._pendingAutoDetect = true;
+					};
+					reader.readAsDataURL(file);
+				},
+
+				// Sample the top-left corner pixel to set trimColor
+				sampleCornerColor() {
+					if (!this.originalSrc) return;
+					const img = new Image();
+					img.onload = () => {
+						const canvas = document.getElementById('trimCanvas');
+						const ctx = canvas.getContext('2d');
+						canvas.width = img.width;
+						canvas.height = img.height;
+						ctx.drawImage(img, 0, 0);
+						const px = ctx.getImageData(0, 0, 1, 1).data;
+						this.trimColor = '#' + [px[0], px[1], px[2]].map(v => v.toString(16).padStart(2, '0')).join('');
+					};
+					img.src = this.originalSrc;
+				},
+
+				hexToRgb(hex) {
+					const r = parseInt(hex.slice(1, 3), 16);
+					const g = parseInt(hex.slice(3, 5), 16);
+					const b = parseInt(hex.slice(5, 7), 16);
+					return { r, g, b };
+				},
+
+				colorDistance(r1, g1, b1, r2, g2, b2) {
+					return Math.sqrt((r1 - r2) ** 2 + (g1 - g2) ** 2 + (b1 - b2) ** 2);
+				},
+
+				trim() {
+					if (!this.originalSrc || this.isProcessing) return;
+					this.isProcessing = true;
+					this.error = '';
+
+					setTimeout(() => {
+						const img = new Image();
+						img.onload = () => {
+							try {
+								const canvas = document.getElementById('trimCanvas');
+								const ctx = canvas.getContext('2d');
+								canvas.width = img.width;
+								canvas.height = img.height;
+								ctx.drawImage(img, 0, 0);
+
+								const { width, height } = canvas;
+								const imageData = ctx.getImageData(0, 0, width, height);
+								const data = imageData.data;
+
+								const isBackground = (x, y) => {
+									const idx = (y * width + x) * 4;
+									const r = data[idx], g = data[idx + 1], b = data[idx + 2], a = data[idx + 3];
+
+									if (this.trimMode === 'transparent') {
+										return a <= this.alphaThreshold;
+									} else {
+										// In color mode, also trim fully-transparent pixels
+										if (a === 0) return true;
+										const tc = this.hexToRgb(this.trimColor);
+										return this.colorDistance(r, g, b, tc.r, tc.g, tc.b) <= this.tolerance;
+									}
+								};
+
+								// Scan from each edge inward
+								let top = 0, bottom = height - 1, left = 0, right = width - 1;
+
+								// Top
+								outer: for (let y = 0; y < height; y++) {
+									for (let x = 0; x < width; x++) {
+										if (!isBackground(x, y)) { top = y; break outer; }
+									}
+								}
+								// Bottom
+								outer: for (let y = height - 1; y >= top; y--) {
+									for (let x = 0; x < width; x++) {
+										if (!isBackground(x, y)) { bottom = y; break outer; }
+									}
+								}
+								// Left
+								outer: for (let x = 0; x < width; x++) {
+									for (let y = top; y <= bottom; y++) {
+										if (!isBackground(x, y)) { left = x; break outer; }
+									}
+								}
+								// Right
+								outer: for (let x = width - 1; x >= left; x--) {
+									for (let y = top; y <= bottom; y++) {
+										if (!isBackground(x, y)) { right = x; break outer; }
+									}
+								}
+
+								// Apply extra padding
+								const pad = this.extraPadding;
+								const cropX = Math.max(0, left - pad);
+								const cropY = Math.max(0, top - pad);
+								const cropW = Math.min(width, right + pad + 1) - cropX;
+								const cropH = Math.min(height, bottom + pad + 1) - cropY;
+
+								if (cropW <= 0 || cropH <= 0) {
+									this.error = 'Could not find content to crop to. Try adjusting the tolerance or trim mode.';
+									this.isProcessing = false;
+									return;
+								}
+
+								// Draw cropped image to new canvas
+								const outCanvas = document.createElement('canvas');
+								outCanvas.width = cropW;
+								outCanvas.height = cropH;
+								const outCtx = outCanvas.getContext('2d');
+								outCtx.drawImage(canvas, cropX, cropY, cropW, cropH, 0, 0, cropW, cropH);
+
+								const mimeMap = { png: 'image/png', jpg: 'image/jpeg', webp: 'image/webp' };
+								const mime = mimeMap[this.outputFormat] || 'image/png';
+								this.resultSrc = outCanvas.toDataURL(mime, 0.92);
+
+								const savedPct = Math.round((1 - (cropW * cropH) / (width * height)) * 100);
+								this.stats = {
+									originalW: width,
+									originalH: height,
+									trimmedW: cropW,
+									trimmedH: cropH,
+									savedPct: Math.max(0, savedPct),
+									top: top - cropY + (top > 0 ? pad : 0),
+									bottom: height - 1 - bottom - (bottom < height - 1 ? 0 : 0) + (bottom < height - 1 ? pad : 0),
+									left: left - cropX + (left > 0 ? pad : 0),
+									right: width - 1 - right + (right < width - 1 ? pad : 0),
+								};
+								// Simpler display: just show removed edges
+								this.stats.top    = Math.max(0, top - pad);
+								this.stats.bottom = Math.max(0, height - 1 - bottom - pad);
+								this.stats.left   = Math.max(0, left - pad);
+								this.stats.right  = Math.max(0, width - 1 - right - pad);
+
+								this.previewTab = 'result';
+							} catch (err) {
+								this.error = 'Failed to process image: ' + err.message;
+							} finally {
+								this.isProcessing = false;
+							}
+						};
+						img.onerror = () => {
+							this.error = 'Failed to load image.';
+							this.isProcessing = false;
+						};
+						img.src = this.originalSrc;
+					}, 50);
+				},
+			}));
+		});
+	</script>
+</Layout>

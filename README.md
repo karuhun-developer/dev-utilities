@@ -19,6 +19,7 @@ A collection of fast, free, and privacy-focused developer utilities — everythi
 | **Timestamp Converter** | Convert Unix timestamps to UTC & local time, auto-detect timezone |
 | **URL Encode / Decode** | Encode and decode URL strings |
 | **Image Base64** | Convert images to Base64 and decode Base64 back to images |
+| **Trim Image Padding** | Remove transparent or solid-color padding/whitespace from images with adjustable tolerance |
 | **Image Converter** | Convert images between JPG, PNG, WEBP, and more |
 | **Resize Image** | Resize images to specific pixel dimensions with aspect ratio lock |
 | **Scale Image** | Scale images up or down by percentage with live size preview |
@@ -28,6 +29,7 @@ A collection of fast, free, and privacy-focused developer utilities — everythi
 | **QR Code Generator** | Generate QR codes from text/URL with custom size & colors |
 | **QR Code Reader** | Scan and decode QR codes from image uploads or live camera |
 | **Barcode Generator** | Generate CODE128, EAN, UPC, and other barcodes. Download as PNG/SVG |
+| **Word Counter** | Count words, characters (with/without spaces), sentences, paragraphs, lines, unique words, and estimate reading & speaking time |
 
 ---
 
@@ -113,7 +115,9 @@ npm run preview
 │   │   ├── text-template.astro
 │   │   ├── qr-generator.astro
 │   │   ├── qr-reader.astro
-│   │   └── barcode-generator.astro
+│   │   ├── barcode-generator.astro
+│   │   ├── word-counter.astro
+│   │   └── trim-image.astro
 │   └── styles/
 │       └── global.css
 ├── astro.config.mjs
