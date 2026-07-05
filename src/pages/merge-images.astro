@@ -1,0 +1,360 @@
+---
+import Layout from '../layouts/Layout.astro';
+---
+
+<Layout
+	title="Merge Images"
+	description="Stitch multiple images together horizontally or vertically. Combine photos online, completely in your browser without uploading files."
+	keywords="merge images, stitch photos, join images, combine pictures, image joiner online"
+>
+	<div class="max-w-6xl" x-data="mergeImagesApp()" x-init="init()">
+		<h1 class="text-2xl font-bold text-zinc-900 mb-2">Merge Images</h1>
+		<p class="text-zinc-600 mb-8">Combine multiple photos into a single image side-by-side or stacked vertically. Everything runs locally in your browser.</p>
+
+		<div class="grid grid-cols-1 lg:grid-cols-12 gap-8">
+			
+			<!-- Settings & Files Panel -->
+			<div class="lg:col-span-5 space-y-6">
+				
+				<!-- Add Images Area -->
+				<div
+					class="relative flex flex-col items-center justify-center border-2 border-dashed rounded-xl p-8 text-center transition-colors cursor-pointer"
+					:class="isDragging ? 'border-zinc-500 bg-zinc-100' : 'border-zinc-300 bg-zinc-50 hover:bg-zinc-100 hover:border-zinc-400'"
+					@dragover.prevent="isDragging = true"
+					@dragleave.prevent="isDragging = false"
+					@drop.prevent="onDrop($event)"
+					@click="$refs.fileInput.click()"
+				>
+					<svg xmlns="http://www.w3.org/2000/svg" class="w-10 h-10 text-zinc-300 mb-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+						<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/>
+					</svg>
+					<p class="text-sm font-medium text-zinc-600">Drop images here or <span class="text-zinc-900 underline underline-offset-2">browse files</span></p>
+					<p class="text-xs text-zinc-400 mt-1">Select multiple files (PNG, JPG, WEBP)</p>
+					<input
+						type="file"
+						accept="image/*"
+						multiple
+						class="sr-only"
+						x-ref="fileInput"
+						@change="onFileChange($event)"
+					/>
+				</div>
+
+				<!-- Settings -->
+				<div class="bg-white border border-zinc-200 rounded-xl p-5 space-y-5" x-show="files.length > 0" style="display:none;">
+					<h3 class="text-sm font-bold text-zinc-900 border-b border-zinc-200 pb-2">Merge Settings</h3>
+					
+					<div class="grid grid-cols-2 gap-4">
+						<!-- Direction -->
+						<div>
+							<label class="block text-xs font-semibold text-zinc-500 uppercase tracking-wider mb-2">Layout Direction</label>
+							<div class="flex gap-2">
+								<button @click="direction = 'horizontal'; updatePreview()" :class="direction === 'horizontal' ? 'bg-zinc-900 text-white' : 'bg-zinc-50 text-zinc-600 border border-zinc-200'" class="flex-1 py-1.5 rounded-lg text-xs font-semibold transition-colors flex items-center justify-center gap-1">
+									<svg xmlns="http://www.w3.org/2000/svg" class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M12 5v14"/></svg>
+									Side-by-Side
+								</button>
+								<button @click="direction = 'vertical'; updatePreview()" :class="direction === 'vertical' ? 'bg-zinc-900 text-white' : 'bg-zinc-50 text-zinc-600 border border-zinc-200'" class="flex-1 py-1.5 rounded-lg text-xs font-semibold transition-colors flex items-center justify-center gap-1">
+									<svg xmlns="http://www.w3.org/2000/svg" class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="3" width="14" height="18" rx="2"/><path d="M5 12h14"/></svg>
+									Stacked
+								</button>
+							</div>
+						</div>
+						
+						<!-- Alignment -->
+						<div>
+							<label class="block text-xs font-semibold text-zinc-500 uppercase tracking-wider mb-2">Alignment</label>
+							<select x-model="alignment" @change="updatePreview()" class="w-full px-3 py-1.5 border border-zinc-300 rounded-lg text-sm focus:outline-none bg-white">
+								<option value="center">Center</option>
+								<option value="start">Top / Left</option>
+								<option value="end">Bottom / Right</option>
+							</select>
+						</div>
+					</div>
+
+					<div class="grid grid-cols-2 gap-4">
+						<!-- Spacing -->
+						<div>
+							<label class="block text-xs font-semibold text-zinc-500 uppercase tracking-wider mb-1">Gap / Spacing (px)</label>
+							<input type="number" x-model.number="spacing" min="0" max="1000" @input="updatePreview()" class="w-full px-3 py-1.5 border border-zinc-300 rounded-lg text-sm focus:outline-none bg-white" />
+						</div>
+
+						<!-- Background Color -->
+						<div>
+							<label class="block text-xs font-semibold text-zinc-500 uppercase tracking-wider mb-1">Canvas Background</label>
+							<div class="flex items-center gap-2">
+								<input type="color" x-model="bgColor" @input="updatePreview()" class="w-8 h-8 rounded border border-zinc-200 p-0.5 cursor-pointer bg-white" />
+								<input type="text" x-model="bgColor" @input="updatePreview()" class="flex-1 min-w-0 px-2 py-1.5 border border-zinc-300 rounded text-xs font-mono uppercase focus:outline-none" />
+							</div>
+						</div>
+					</div>
+					
+					<!-- Format output -->
+					<div>
+						<label class="block text-xs font-semibold text-zinc-500 uppercase tracking-wider mb-2">Output Format</label>
+						<select x-model="format" @change="updatePreview()" class="w-full px-3 py-1.5 border border-zinc-300 rounded-lg text-sm focus:outline-none bg-white">
+							<option value="image/png">PNG (Lossless)</option>
+							<option value="image/jpeg">JPG / JPEG</option>
+							<option value="image/webp">WEBP</option>
+						</select>
+					</div>
+
+				</div>
+
+				<!-- Image List -->
+				<div x-show="files.length > 0" style="display:none;" class="space-y-2">
+					<div class="flex items-center justify-between mb-1">
+						<p class="text-sm font-semibold text-zinc-700">Images (<span x-text="files.length"></span>)</p>
+						<button @click="clearAll()" class="text-xs text-zinc-400 hover:text-red-500 transition-colors">Clear all</button>
+					</div>
+
+					<!-- File items -->
+					<div class="space-y-2">
+						<template x-for="(file, idx) in files" :key="file.id">
+							<div class="bg-white border border-zinc-200 rounded-xl p-3 flex items-center gap-3">
+								<img :src="file.src" class="w-12 h-12 rounded object-cover border border-zinc-100 bg-zinc-50 flex-shrink-0" />
+								<div class="flex-1 min-w-0">
+									<p class="text-xs font-medium text-zinc-900 truncate" x-text="file.name"></p>
+									<p class="text-[10px] text-zinc-400 mt-0.5"><span x-text="file.width"></span> × <span x-text="file.height"></span> px</p>
+								</div>
+								
+								<!-- Ordering / Actions -->
+								<div class="flex items-center gap-1 flex-shrink-0">
+									<button @click="moveUp(idx)" :disabled="idx === 0" :class="idx === 0 ? 'opacity-30 cursor-not-allowed' : 'hover:bg-zinc-100 text-zinc-600'" class="p-1 rounded transition-colors">
+										<svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m18 15-6-6-6 6"/></svg>
+									</button>
+									<button @click="moveDown(idx)" :disabled="idx === files.length - 1" :class="idx === files.length - 1 ? 'opacity-30 cursor-not-allowed' : 'hover:bg-zinc-100 text-zinc-600'" class="p-1 rounded transition-colors">
+										<svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>
+									</button>
+									<div class="w-px h-4 bg-zinc-200 mx-1"></div>
+									<button @click="removeFile(idx)" class="p-1 text-zinc-400 hover:text-red-500 hover:bg-red-50 rounded transition-colors">
+										<svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18M6 6l12 12"/></svg>
+									</button>
+								</div>
+							</div>
+						</template>
+					</div>
+				</div>
+
+			</div>
+
+			<!-- Preview Area -->
+			<div class="lg:col-span-7 space-y-4">
+				<div class="flex items-center justify-between">
+					<h3 class="text-sm font-semibold text-zinc-900">Live Result Preview</h3>
+					<span x-show="resultDataUrl" class="text-xs text-zinc-500" x-text="resultWidth + ' × ' + resultHeight + ' px'"></span>
+				</div>
+				
+				<div class="bg-zinc-50 border border-zinc-200 rounded-xl flex items-center justify-center min-h-[400px] overflow-hidden p-4 relative" style="background-image: linear-gradient(45deg, #e4e4e7 25%, transparent 25%), linear-gradient(-45deg, #e4e4e7 25%, transparent 25%), linear-gradient(45deg, transparent 75%, #e4e4e7 75%), linear-gradient(-45deg, transparent 75%, #e4e4e7 75%); background-size: 16px 16px; background-position: 0 0, 0 8px, 8px -8px, -8px 0px;">
+					
+					<div x-show="files.length < 2" class="text-center p-8 bg-white/90 rounded-xl backdrop-blur-sm shadow-sm">
+						<p class="text-sm text-zinc-500 font-medium">Add at least 2 images to preview</p>
+					</div>
+
+					<img x-show="resultDataUrl && files.length >= 2" :src="resultDataUrl" alt="Merged Preview" class="max-w-full max-h-[600px] shadow-lg transition-opacity duration-200 object-contain" :class="isProcessing ? 'opacity-50' : 'opacity-100'" />
+					
+					<div x-show="isProcessing" class="absolute inset-0 flex items-center justify-center bg-white/20 backdrop-blur-[1px]">
+						<div class="bg-white p-3 rounded-lg shadow-lg flex items-center gap-2">
+							<svg class="animate-spin w-4 h-4 text-zinc-900" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+							<span class="text-xs font-semibold">Generating...</span>
+						</div>
+					</div>
+				</div>
+
+				<div x-show="resultDataUrl && files.length >= 2" style="display:none;" class="pt-2">
+					<button @click="download()" class="w-full bg-zinc-900 text-white px-4 py-3 rounded-xl text-sm font-semibold hover:bg-zinc-800 transition-colors flex items-center justify-center gap-2 shadow-sm">
+						<svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+						Download Merged Image
+					</button>
+				</div>
+			</div>
+		</div>
+		
+		<canvas id="mergeCanvas" style="display:none;"></canvas>
+	</div>
+
+	<script is:inline>
+		document.addEventListener('alpine:init', () => {
+			Alpine.data('mergeImagesApp', () => ({
+				files: [],
+				isDragging: false,
+				isProcessing: false,
+				
+				direction: 'horizontal', // horizontal | vertical
+				spacing: 0,
+				alignment: 'center', // start | center | end
+				bgColor: '#ffffff',
+				format: 'image/png',
+				
+				resultDataUrl: '',
+				resultWidth: 0,
+				resultHeight: 0,
+				
+				debounceTimer: null,
+
+				init() {},
+
+				onFileChange(e) {
+					[...e.target.files].forEach(f => this.addFile(f));
+					e.target.value = '';
+				},
+
+				onDrop(e) {
+					this.isDragging = false;
+					[...e.dataTransfer.files].filter(f => f.type.startsWith('image/')).forEach(f => this.addFile(f));
+				},
+
+				addFile(file) {
+					const id = Date.now() + Math.random();
+					const reader = new FileReader();
+					reader.onload = (e) => {
+						const src = e.target.result;
+						const img = new Image();
+						img.onload = () => {
+							this.files.push({
+								id,
+								name: file.name,
+								src: src,
+								imgObj: img, // cache loaded image object
+								width: img.width,
+								height: img.height
+							});
+							this.updatePreview();
+						};
+						img.src = src;
+					};
+					reader.readAsDataURL(file);
+				},
+
+				removeFile(idx) {
+					this.files.splice(idx, 1);
+					this.updatePreview();
+				},
+				
+				moveUp(idx) {
+					if (idx === 0) return;
+					const temp = this.files[idx];
+					this.files[idx] = this.files[idx - 1];
+					this.files[idx - 1] = temp;
+					this.updatePreview();
+				},
+				
+				moveDown(idx) {
+					if (idx === this.files.length - 1) return;
+					const temp = this.files[idx];
+					this.files[idx] = this.files[idx + 1];
+					this.files[idx + 1] = temp;
+					this.updatePreview();
+				},
+
+				clearAll() {
+					this.files = [];
+					this.resultDataUrl = '';
+				},
+
+				updatePreview() {
+					if (this.files.length < 2) {
+						this.resultDataUrl = '';
+						return;
+					}
+					
+					// Debounce to prevent lag when sliding spacing/colors rapidly
+					clearTimeout(this.debounceTimer);
+					this.isProcessing = true;
+					
+					this.debounceTimer = setTimeout(() => {
+						this.generateMergedImage();
+					}, 150);
+				},
+				
+				generateMergedImage() {
+					try {
+						const canvas = document.getElementById('mergeCanvas');
+						const ctx = canvas.getContext('2d');
+						
+						let totalWidth = 0;
+						let totalHeight = 0;
+						let maxWidth = 0;
+						let maxHeight = 0;
+						
+						// Calculate canvas dimensions
+						if (this.direction === 'horizontal') {
+							for (const file of this.files) {
+								totalWidth += file.width;
+								if (file.height > maxHeight) maxHeight = file.height;
+							}
+							totalWidth += this.spacing * (this.files.length - 1);
+							canvas.width = totalWidth;
+							canvas.height = maxHeight;
+						} else {
+							for (const file of this.files) {
+								totalHeight += file.height;
+								if (file.width > maxWidth) maxWidth = file.width;
+							}
+							totalHeight += this.spacing * (this.files.length - 1);
+							canvas.width = maxWidth;
+							canvas.height = totalHeight;
+						}
+						
+						this.resultWidth = canvas.width;
+						this.resultHeight = canvas.height;
+						
+						// Fill background
+						ctx.fillStyle = this.bgColor;
+						// Handle transparent bg for png by checking if bgColor is empty or explicitly clearing
+						// But input[type="color"] always returns a hex code, so it's always filled.
+						ctx.fillRect(0, 0, canvas.width, canvas.height);
+						
+						// Draw images
+						let currentX = 0;
+						let currentY = 0;
+						
+						for (const file of this.files) {
+							let drawX = currentX;
+							let drawY = currentY;
+							
+							if (this.direction === 'horizontal') {
+								if (this.alignment === 'center') {
+									drawY = (maxHeight - file.height) / 2;
+								} else if (this.alignment === 'end') {
+									drawY = maxHeight - file.height;
+								} // start is 0, handled
+								
+								ctx.drawImage(file.imgObj, drawX, drawY, file.width, file.height);
+								currentX += file.width + this.spacing;
+							} else {
+								if (this.alignment === 'center') {
+									drawX = (maxWidth - file.width) / 2;
+								} else if (this.alignment === 'end') {
+									drawX = maxWidth - file.width;
+								} // start is 0
+								
+								ctx.drawImage(file.imgObj, drawX, drawY, file.width, file.height);
+								currentY += file.height + this.spacing;
+							}
+						}
+						
+						// Export
+						const extMap = { 'image/png': 'png', 'image/jpeg': 'jpg', 'image/webp': 'webp' };
+						const quality = this.format === 'image/png' ? undefined : 0.92;
+						
+						this.resultDataUrl = canvas.toDataURL(this.format, quality);
+						this.isProcessing = false;
+						
+					} catch (e) {
+						console.error("Error generating merged image", e);
+						this.isProcessing = false;
+					}
+				},
+				
+				download() {
+					if (!this.resultDataUrl) return;
+					const a = document.createElement('a');
+					a.href = this.resultDataUrl;
+					const ext = this.format === 'image/jpeg' ? 'jpg' : this.format.split('/')[1];
+					a.download = `merged-image.${ext}`;
+					a.click();
+				}
+			}));
+		});
+	</script>
+</Layout>
