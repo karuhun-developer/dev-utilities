@@ -21,6 +21,7 @@ A collection of fast, free, and privacy-focused developer utilities — everythi
 | **Image Base64** | Convert images to Base64 and decode Base64 back to images |
 | **Image to SVG Vector** | Convert raster images (PNG, JPG) to SVG vectors with client-side tracing |
 | **Merge Images** | Stitch multiple photos together horizontally or vertically |
+| **Add Watermark** | Add text or image watermarks to your photos with customizable positions |
 | **Placeholder Generator** | Generate custom placeholder mock images. Export to PNG, SVG, WEBP, or Base64 |
 | **Trim Image Padding** | Remove transparent or solid-color padding/whitespace from images with adjustable tolerance |
 | **Image Converter** | Convert images between JPG, PNG, WEBP, and more |
@@ -123,6 +124,7 @@ npm run preview
 │   │   ├── trim-image.astro
 │   │   ├── image-to-svg.astro
 │   │   ├── merge-images.astro
+│   │   ├── add-watermark.astro
 │   │   └── placeholder-generator.astro
 │   └── styles/
 │       └── global.css

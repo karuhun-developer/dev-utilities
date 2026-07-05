@@ -1,0 +1,398 @@
+---
+import Layout from '../layouts/Layout.astro';
+---
+
+<Layout
+	title="Add Watermark to Image"
+	description="Add text or image watermarks to your photos easily. Customize position, opacity, size, and more entirely in your browser."
+	keywords="add watermark, watermark image online, text watermark, logo watermark, protect image, client side image editing"
+>
+	<div class="max-w-6xl" x-data="watermarkApp()" x-init="init()">
+		<h1 class="text-2xl font-bold text-zinc-900 mb-2">Add Watermark</h1>
+		<p class="text-zinc-600 mb-8">Protect your photos by adding a text or logo watermark. Customize the position, opacity, and size. Runs entirely locally.</p>
+
+		<div class="grid grid-cols-1 lg:grid-cols-12 gap-8">
+			
+			<!-- Settings Panel -->
+			<div class="lg:col-span-5 space-y-6">
+				
+				<!-- Base Image Upload -->
+				<div
+					x-show="!baseImageSrc"
+					class="relative flex flex-col items-center justify-center border-2 border-dashed rounded-xl p-10 text-center transition-colors cursor-pointer"
+					:class="isDragging ? 'border-zinc-500 bg-zinc-100' : 'border-zinc-300 bg-zinc-50 hover:bg-zinc-100 hover:border-zinc-400'"
+					@dragover.prevent="isDragging = true"
+					@dragleave.prevent="isDragging = false"
+					@drop.prevent="onDropBaseImage($event)"
+					@click="$refs.baseInput.click()"
+				>
+					<svg xmlns="http://www.w3.org/2000/svg" class="w-10 h-10 text-zinc-300 mb-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+						<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/>
+					</svg>
+					<p class="text-sm font-medium text-zinc-600">Upload Main Image</p>
+					<p class="text-xs text-zinc-400 mt-1">Drop image here or <span class="text-zinc-900 underline underline-offset-2">browse</span></p>
+					<input type="file" accept="image/*" class="sr-only" x-ref="baseInput" @change="onBaseFileChange($event)" />
+				</div>
+
+				<div x-show="baseImageSrc" style="display:none;" class="bg-white border border-zinc-200 rounded-xl p-4 flex items-center justify-between mb-2">
+					<div class="flex items-center gap-3 min-w-0">
+						<div class="w-10 h-10 rounded border border-zinc-200 bg-zinc-50 overflow-hidden flex-shrink-0">
+							<img :src="baseImageSrc" class="w-full h-full object-cover" />
+						</div>
+						<div class="min-w-0">
+							<p class="text-xs font-semibold text-zinc-500 uppercase tracking-wider mb-0.5">Main Image</p>
+							<p class="text-sm font-medium text-zinc-900 truncate" x-text="baseFilename"></p>
+						</div>
+					</div>
+					<button @click="clearBaseImage()" class="text-xs text-red-500 font-medium hover:text-red-600 border border-red-200 bg-red-50 hover:bg-red-100 px-3 py-1.5 rounded-lg transition-colors flex-shrink-0">
+						Change
+					</button>
+				</div>
+
+				<!-- Watermark Settings -->
+				<div class="bg-white border border-zinc-200 rounded-xl p-5 space-y-6" :class="!baseImageSrc ? 'opacity-50 pointer-events-none' : ''">
+					
+					<!-- Type Selection -->
+					<div>
+						<label class="block text-xs font-semibold text-zinc-500 uppercase tracking-wider mb-2">Watermark Type</label>
+						<div class="flex gap-2">
+							<button @click="watermarkType = 'text'; updatePreview()" :class="watermarkType === 'text' ? 'bg-zinc-900 text-white' : 'bg-zinc-50 text-zinc-600 border border-zinc-200'" class="flex-1 py-1.5 rounded-lg text-xs font-semibold transition-colors">
+								Text
+							</button>
+							<button @click="watermarkType = 'image'; updatePreview()" :class="watermarkType === 'image' ? 'bg-zinc-900 text-white' : 'bg-zinc-50 text-zinc-600 border border-zinc-200'" class="flex-1 py-1.5 rounded-lg text-xs font-semibold transition-colors">
+								Image / Logo
+							</button>
+						</div>
+					</div>
+
+					<!-- Text Options -->
+					<div x-show="watermarkType === 'text'" class="space-y-4">
+						<div>
+							<label class="block text-xs font-semibold text-zinc-500 uppercase tracking-wider mb-1">Watermark Text</label>
+							<input type="text" x-model="watermarkText" @input="updatePreview()" placeholder="e.g., © My Brand" class="w-full px-3 py-2 border border-zinc-300 rounded-lg text-sm focus:outline-none focus:ring-1 focus:ring-zinc-500 bg-white" />
+						</div>
+						
+						<div class="grid grid-cols-2 gap-4">
+							<div>
+								<label class="block text-xs font-semibold text-zinc-500 uppercase tracking-wider mb-1">Text Color</label>
+								<div class="flex items-center gap-2">
+									<input type="color" x-model="textColor" @input="updatePreview()" class="w-8 h-8 rounded border border-zinc-200 p-0.5 cursor-pointer bg-white" />
+									<input type="text" x-model="textColor" @input="updatePreview()" class="flex-1 min-w-0 px-2 py-1.5 border border-zinc-300 rounded text-xs font-mono uppercase focus:outline-none" />
+								</div>
+							</div>
+							<div>
+								<label class="block text-xs font-semibold text-zinc-500 uppercase tracking-wider mb-1">Font Size</label>
+								<input type="range" x-model.number="fontSize" min="1" max="100" step="1" @input="updatePreview()" class="w-full accent-zinc-900 mt-2" />
+							</div>
+						</div>
+					</div>
+
+					<!-- Image Options -->
+					<div x-show="watermarkType === 'image'" style="display:none;" class="space-y-4">
+						<div x-show="!watermarkImageSrc">
+							<label class="block text-xs font-semibold text-zinc-500 uppercase tracking-wider mb-1">Upload Logo (PNG w/ Transparency)</label>
+							<button @click="$refs.wmInput.click()" class="w-full border-2 border-dashed border-zinc-300 hover:border-zinc-400 bg-zinc-50 hover:bg-zinc-100 text-zinc-600 py-4 rounded-lg text-sm font-medium transition-colors">
+								Browse Image...
+							</button>
+							<input type="file" accept="image/*" class="sr-only" x-ref="wmInput" @change="onWmFileChange($event)" />
+						</div>
+						
+						<div x-show="watermarkImageSrc" class="flex items-center gap-3 p-2 border border-zinc-200 rounded-lg bg-zinc-50">
+							<img :src="watermarkImageSrc" class="w-8 h-8 object-contain" />
+							<span class="text-xs text-zinc-600 flex-1 truncate" x-text="wmFilename"></span>
+							<button @click="watermarkImageSrc = ''; watermarkImgObj = null; updatePreview()" class="text-xs text-red-500 font-medium hover:underline p-1">Remove</button>
+						</div>
+
+						<div>
+							<div class="flex justify-between mb-1">
+								<label class="text-xs font-semibold text-zinc-500 uppercase tracking-wider">Logo Scale</label>
+								<span class="text-xs font-mono text-zinc-500" x-text="watermarkScale + '%'"></span>
+							</div>
+							<input type="range" x-model.number="watermarkScale" min="1" max="100" step="1" @input="updatePreview()" class="w-full accent-zinc-900" />
+						</div>
+					</div>
+
+					<hr class="border-zinc-200" />
+
+					<!-- Placement Settings -->
+					<div>
+						<label class="block text-xs font-semibold text-zinc-500 uppercase tracking-wider mb-2">Position</label>
+						<!-- 3x3 Grid for positions -->
+						<div class="grid grid-cols-3 gap-2 max-w-[200px] mx-auto mb-4 bg-zinc-100 p-2 rounded-lg border border-zinc-200">
+							<template x-for="pos in ['tl', 'tc', 'tr', 'cl', 'cc', 'cr', 'bl', 'bc', 'br']" :key="pos">
+								<button
+									@click="position = pos; updatePreview()"
+									class="h-10 rounded border transition-colors flex items-center justify-center"
+									:class="position === pos ? 'bg-zinc-900 border-zinc-900 text-white' : 'bg-white border-zinc-300 text-zinc-400 hover:bg-zinc-50'"
+								>
+									<!-- Icon dots representing position -->
+									<div class="w-2 h-2 rounded-full bg-current"></div>
+								</button>
+							</template>
+						</div>
+						
+						<div class="grid grid-cols-2 gap-4">
+							<div>
+								<label class="block text-xs font-semibold text-zinc-500 uppercase tracking-wider mb-1">Margin (px)</label>
+								<input type="number" x-model.number="margin" min="0" max="1000" step="1" @input="updatePreview()" class="w-full px-3 py-1.5 border border-zinc-300 rounded-lg text-sm focus:outline-none bg-white" />
+							</div>
+							<div>
+								<div class="flex justify-between mb-1">
+									<label class="text-xs font-semibold text-zinc-500 uppercase tracking-wider">Opacity</label>
+									<span class="text-xs font-mono text-zinc-500" x-text="Math.round(opacity * 100) + '%'"></span>
+								</div>
+								<input type="range" x-model.number="opacity" min="0" max="1" step="0.05" @input="updatePreview()" class="w-full accent-zinc-900 mt-2" />
+							</div>
+						</div>
+					</div>
+
+					<hr class="border-zinc-200" />
+
+					<!-- Output Format -->
+					<div>
+						<label class="block text-xs font-semibold text-zinc-500 uppercase tracking-wider mb-2">Output Format</label>
+						<select x-model="format" @change="updatePreview()" class="w-full px-3 py-2 border border-zinc-300 rounded-lg text-sm focus:outline-none bg-white">
+							<option value="image/png">PNG (Lossless)</option>
+							<option value="image/jpeg">JPG / JPEG</option>
+							<option value="image/webp">WEBP</option>
+						</select>
+					</div>
+					
+				</div>
+			</div>
+
+			<!-- Preview Area -->
+			<div class="lg:col-span-7 space-y-4">
+				<div class="flex items-center justify-between">
+					<h3 class="text-sm font-semibold text-zinc-900">Live Preview</h3>
+					<span x-show="resultDataUrl" class="text-xs text-zinc-500" x-text="resultWidth + ' × ' + resultHeight + ' px'"></span>
+				</div>
+				
+				<div class="bg-zinc-50 border border-zinc-200 rounded-xl flex items-center justify-center min-h-[400px] overflow-hidden p-4 relative" style="background-image: linear-gradient(45deg, #e4e4e7 25%, transparent 25%), linear-gradient(-45deg, #e4e4e7 25%, transparent 25%), linear-gradient(45deg, transparent 75%, #e4e4e7 75%), linear-gradient(-45deg, transparent 75%, #e4e4e7 75%); background-size: 16px 16px; background-position: 0 0, 0 8px, 8px -8px, -8px 0px;">
+					
+					<div x-show="!baseImageSrc" class="text-center p-8 bg-white/90 rounded-xl backdrop-blur-sm shadow-sm">
+						<p class="text-sm text-zinc-500 font-medium">Upload an image to see preview</p>
+					</div>
+
+					<img x-show="resultDataUrl" :src="resultDataUrl" alt="Watermarked Image Preview" class="max-w-full max-h-[600px] shadow-lg object-contain" />
+					
+				</div>
+
+				<div x-show="resultDataUrl" style="display:none;" class="pt-2">
+					<button @click="download()" class="w-full bg-zinc-900 text-white px-4 py-3 rounded-xl text-sm font-semibold hover:bg-zinc-800 transition-colors flex items-center justify-center gap-2 shadow-sm">
+						<svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+						Download Watermarked Image
+					</button>
+				</div>
+			</div>
+		</div>
+		
+		<canvas id="watermarkCanvas" style="display:none;"></canvas>
+	</div>
+
+	<script is:inline>
+		document.addEventListener('alpine:init', () => {
+			Alpine.data('watermarkApp', () => ({
+				isDragging: false,
+				
+				baseImageSrc: '',
+				baseFilename: '',
+				baseImgObj: null,
+				
+				watermarkType: 'text', // 'text' or 'image'
+				
+				watermarkText: '© Watermark',
+				textColor: '#ffffff',
+				fontSize: 10, // percentage of base image diagonal
+				
+				watermarkImageSrc: '',
+				wmFilename: '',
+				watermarkImgObj: null,
+				watermarkScale: 20, // percentage of base image width
+				
+				position: 'br', // tl, tc, tr, cl, cc, cr, bl, bc, br
+				margin: 20, // px
+				opacity: 0.6,
+				
+				format: 'image/jpeg',
+				
+				resultDataUrl: '',
+				resultWidth: 0,
+				resultHeight: 0,
+				
+				debounceTimer: null,
+
+				init() {},
+
+				onBaseFileChange(e) {
+					const file = e.target.files[0];
+					if (file) this.loadBaseFile(file);
+					e.target.value = '';
+				},
+
+				onDropBaseImage(e) {
+					this.isDragging = false;
+					const file = e.dataTransfer.files[0];
+					if (file && file.type.startsWith('image/')) this.loadBaseFile(file);
+				},
+
+				loadBaseFile(file) {
+					this.baseFilename = file.name;
+					const reader = new FileReader();
+					reader.onload = (e) => {
+						const src = e.target.result;
+						const img = new Image();
+						img.onload = () => {
+							this.baseImgObj = img;
+							this.baseImageSrc = src;
+							this.updatePreview();
+						};
+						img.src = src;
+					};
+					reader.readAsDataURL(file);
+				},
+
+				clearBaseImage() {
+					this.baseImageSrc = '';
+					this.baseImgObj = null;
+					this.resultDataUrl = '';
+				},
+				
+				onWmFileChange(e) {
+					const file = e.target.files[0];
+					if (file) {
+						this.wmFilename = file.name;
+						const reader = new FileReader();
+						reader.onload = (ev) => {
+							const src = ev.target.result;
+							const img = new Image();
+							img.onload = () => {
+								this.watermarkImgObj = img;
+								this.watermarkImageSrc = src;
+								this.updatePreview();
+							};
+							img.src = src;
+						};
+						reader.readAsDataURL(file);
+					}
+					e.target.value = '';
+				},
+
+				updatePreview() {
+					if (!this.baseImgObj) {
+						this.resultDataUrl = '';
+						return;
+					}
+					
+					// Debounce rendering
+					clearTimeout(this.debounceTimer);
+					this.debounceTimer = setTimeout(() => {
+						this.generateWatermark();
+					}, 50);
+				},
+				
+				generateWatermark() {
+					try {
+						const canvas = document.getElementById('watermarkCanvas');
+						const ctx = canvas.getContext('2d');
+						
+						canvas.width = this.baseImgObj.width;
+						canvas.height = this.baseImgObj.height;
+						
+						this.resultWidth = canvas.width;
+						this.resultHeight = canvas.height;
+						
+						// Draw base image
+						ctx.drawImage(this.baseImgObj, 0, 0);
+						
+						// Set opacity for watermark
+						ctx.globalAlpha = this.opacity;
+						
+						let wmWidth = 0;
+						let wmHeight = 0;
+						let drawX = 0;
+						let drawY = 0;
+						const m = this.margin;
+						
+						if (this.watermarkType === 'image' && this.watermarkImgObj) {
+							// Size based on percentage of base image width
+							wmWidth = canvas.width * (this.watermarkScale / 100);
+							const ratio = this.watermarkImgObj.height / this.watermarkImgObj.width;
+							wmHeight = wmWidth * ratio;
+						} else if (this.watermarkType === 'text' && this.watermarkText) {
+							// Font size based on diagonal percentage for robustness
+							const diagonal = Math.sqrt(canvas.width*canvas.width + canvas.height*canvas.height);
+							const pxFontSize = Math.max(12, diagonal * (this.fontSize / 100));
+							
+							ctx.font = `bold ${pxFontSize}px system-ui, -apple-system, sans-serif`;
+							const metrics = ctx.measureText(this.watermarkText);
+							wmWidth = metrics.width;
+							// Approximating text height based on font size (actual height depends on font)
+							wmHeight = pxFontSize;
+						}
+						
+						// Calculate X position
+						if (['tl', 'cl', 'bl'].includes(this.position)) {
+							drawX = m;
+						} else if (['tc', 'cc', 'bc'].includes(this.position)) {
+							drawX = (canvas.width - wmWidth) / 2;
+						} else if (['tr', 'cr', 'br'].includes(this.position)) {
+							drawX = canvas.width - wmWidth - m;
+						}
+						
+						// Calculate Y position
+						if (['tl', 'tc', 'tr'].includes(this.position)) {
+							drawY = m;
+						} else if (['cl', 'cc', 'cr'].includes(this.position)) {
+							drawY = (canvas.height - wmHeight) / 2;
+						} else if (['bl', 'bc', 'br'].includes(this.position)) {
+							drawY = canvas.height - wmHeight - m;
+						}
+						
+						// Draw watermark
+						if (this.watermarkType === 'image' && this.watermarkImgObj) {
+							ctx.drawImage(this.watermarkImgObj, drawX, drawY, wmWidth, wmHeight);
+						} else if (this.watermarkType === 'text' && this.watermarkText) {
+							// For text, we use top baseline so calculation is identical to image bounding box
+							ctx.fillStyle = this.textColor;
+							ctx.textBaseline = 'top';
+							
+							// Add a slight shadow/stroke to make text readable on any background
+							ctx.shadowColor = "rgba(0,0,0,0.5)";
+							ctx.shadowBlur = 4;
+							ctx.shadowOffsetX = 1;
+							ctx.shadowOffsetY = 1;
+							
+							ctx.fillText(this.watermarkText, drawX, drawY);
+							
+							// Reset shadow
+							ctx.shadowColor = "transparent";
+							ctx.shadowBlur = 0;
+							ctx.shadowOffsetX = 0;
+							ctx.shadowOffsetY = 0;
+						}
+						
+						ctx.globalAlpha = 1.0;
+						
+						// Export
+						const quality = this.format === 'image/png' ? undefined : 0.92;
+						this.resultDataUrl = canvas.toDataURL(this.format, quality);
+						
+					} catch (e) {
+						console.error("Error generating watermark", e);
+					}
+				},
+				
+				download() {
+					if (!this.resultDataUrl) return;
+					const a = document.createElement('a');
+					a.href = this.resultDataUrl;
+					const ext = this.format === 'image/jpeg' ? 'jpg' : this.format.split('/')[1];
+					const baseName = this.baseFilename.replace(/\.[^/.]+$/, "");
+					a.download = `${baseName}-watermarked.${ext}`;
+					a.click();
+				}
+			}));
+		});
+	</script>
+</Layout>
