@@ -20,6 +20,7 @@ A collection of fast, free, and privacy-focused developer utilities — everythi
 | **URL Encode / Decode** | Encode and decode URL strings |
 | **Image Base64** | Convert images to Base64 and decode Base64 back to images |
 | **Image to SVG Vector** | Convert raster images (PNG, JPG) to SVG vectors with client-side tracing |
+| **Placeholder Generator** | Generate custom placeholder mock images. Export to PNG, SVG, WEBP, or Base64 |
 | **Trim Image Padding** | Remove transparent or solid-color padding/whitespace from images with adjustable tolerance |
 | **Image Converter** | Convert images between JPG, PNG, WEBP, and more |
 | **Resize Image** | Resize images to specific pixel dimensions with aspect ratio lock |
@@ -119,7 +120,8 @@ npm run preview
 │   │   ├── barcode-generator.astro
 │   │   ├── word-counter.astro
 │   │   ├── trim-image.astro
-│   │   └── image-to-svg.astro
+│   │   ├── image-to-svg.astro
+│   │   └── placeholder-generator.astro
 │   └── styles/
 │       └── global.css
 ├── astro.config.mjs

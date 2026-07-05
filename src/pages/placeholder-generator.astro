@@ -1,0 +1,259 @@
+---
+import Layout from '../layouts/Layout.astro';
+---
+
+<Layout
+	title="Placeholder Image Generator"
+	description="Generate custom placeholder images instantly. Choose sizes, colors, and text. Download as PNG, WEBP, or SVG, or copy as a Base64 data URL."
+	keywords="placeholder generator, dummy image generator, mock image, placeholder svg, placeholder png, web dev tools, base64 image"
+>
+	<div class="max-w-6xl" x-data="placeholderApp()" x-init="init()">
+		<h1 class="text-2xl font-bold text-zinc-900 mb-2">Placeholder Image Generator</h1>
+		<p class="text-zinc-600 mb-8">Generate custom placeholder images for your mockups and designs. Download them as files or copy them as Base64 strings.</p>
+
+		<div class="grid grid-cols-1 lg:grid-cols-12 gap-8">
+			
+			<!-- Settings Panel -->
+			<div class="lg:col-span-5 space-y-6">
+				<div class="bg-white border border-zinc-200 rounded-xl p-5 space-y-5">
+					<h3 class="text-sm font-bold text-zinc-900 border-b border-zinc-200 pb-2">Image Settings</h3>
+					
+					<!-- Size Presets -->
+					<div>
+						<label class="block text-sm font-medium text-zinc-700 mb-2">Size Preset</label>
+						<select x-model="selectedPreset" @change="applyPreset()" class="w-full px-3 py-2 border border-zinc-300 rounded-lg text-sm focus:outline-none focus:ring-1 focus:ring-zinc-500 bg-white">
+							<template x-for="preset in presets" :key="preset.id">
+								<option :value="preset.id" x-text="preset.label + (preset.id !== 'custom' ? ` (${preset.width}×${preset.height})` : '')"></option>
+							</template>
+						</select>
+					</div>
+
+					<!-- Custom Dimensions -->
+					<div class="grid grid-cols-2 gap-4">
+						<div>
+							<label class="block text-xs font-semibold text-zinc-500 uppercase tracking-wider mb-1">Width (px)</label>
+							<input type="number" x-model.number="width" min="1" max="5000" @input="updatePreview(); selectedPreset = 'custom'" class="w-full px-3 py-2 border border-zinc-300 rounded-lg text-sm focus:outline-none focus:ring-1 focus:ring-zinc-500 bg-white" />
+						</div>
+						<div>
+							<label class="block text-xs font-semibold text-zinc-500 uppercase tracking-wider mb-1">Height (px)</label>
+							<input type="number" x-model.number="height" min="1" max="5000" @input="updatePreview(); selectedPreset = 'custom'" class="w-full px-3 py-2 border border-zinc-300 rounded-lg text-sm focus:outline-none focus:ring-1 focus:ring-zinc-500 bg-white" />
+						</div>
+					</div>
+
+					<!-- Colors -->
+					<div class="grid grid-cols-2 gap-4">
+						<div>
+							<label class="block text-xs font-semibold text-zinc-500 uppercase tracking-wider mb-1">Background Color</label>
+							<div class="flex items-center gap-2">
+								<input type="color" x-model="bgColor" @input="updatePreview()" class="w-9 h-9 rounded border border-zinc-200 p-0.5 cursor-pointer bg-white" />
+								<input type="text" x-model="bgColor" @input="updatePreview()" class="flex-1 min-w-0 px-2 py-1.5 border border-zinc-300 rounded text-xs font-mono uppercase focus:outline-none focus:ring-1 focus:ring-zinc-500" />
+							</div>
+						</div>
+						<div>
+							<label class="block text-xs font-semibold text-zinc-500 uppercase tracking-wider mb-1">Text Color</label>
+							<div class="flex items-center gap-2">
+								<input type="color" x-model="textColor" @input="updatePreview()" class="w-9 h-9 rounded border border-zinc-200 p-0.5 cursor-pointer bg-white" />
+								<input type="text" x-model="textColor" @input="updatePreview()" class="flex-1 min-w-0 px-2 py-1.5 border border-zinc-300 rounded text-xs font-mono uppercase focus:outline-none focus:ring-1 focus:ring-zinc-500" />
+							</div>
+						</div>
+					</div>
+
+					<!-- Custom Text -->
+					<div>
+						<label class="block text-xs font-semibold text-zinc-500 uppercase tracking-wider mb-1">Custom Text (Optional)</label>
+						<input type="text" x-model="customText" @input="updatePreview()" placeholder="Leave empty for dimensions" class="w-full px-3 py-2 border border-zinc-300 rounded-lg text-sm focus:outline-none focus:ring-1 focus:ring-zinc-500 bg-white" />
+					</div>
+					
+					<!-- Output Format -->
+					<div>
+						<label class="block text-xs font-semibold text-zinc-500 uppercase tracking-wider mb-2">Output Format</label>
+						<div class="flex gap-2">
+							<template x-for="fmt in ['svg','png','webp']" :key="fmt">
+								<button
+									@click="outputFormat = fmt; updatePreview()"
+									:class="outputFormat === fmt ? 'bg-zinc-900 text-white border-zinc-900' : 'bg-zinc-50 text-zinc-600 border-zinc-200 hover:border-zinc-400'"
+									class="flex-1 py-1.5 rounded-lg border text-xs font-semibold uppercase tracking-wide transition-all"
+									x-text="fmt"
+								></button>
+							</template>
+						</div>
+					</div>
+
+					<!-- Actions -->
+					<div class="pt-2 grid grid-cols-1 sm:grid-cols-2 gap-3">
+						<button @click="download()" class="w-full bg-zinc-900 text-white px-4 py-2.5 rounded-xl text-sm font-semibold hover:bg-zinc-800 transition-colors flex items-center justify-center gap-2">
+							<svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+							Download
+						</button>
+						<button @click="copyBase64()" class="w-full bg-white text-zinc-700 border border-zinc-300 hover:border-zinc-500 px-4 py-2.5 rounded-xl text-sm font-semibold transition-colors flex items-center justify-center gap-2 relative">
+							<svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+							<span x-text="copiedBase64 ? 'Copied!' : 'Copy Base64'"></span>
+						</button>
+					</div>
+				</div>
+			</div>
+
+			<!-- Preview Area -->
+			<div class="lg:col-span-7 space-y-4">
+				<div class="flex items-center justify-between">
+					<h3 class="text-sm font-semibold text-zinc-900">Live Preview</h3>
+					<span class="text-xs text-zinc-500" x-text="width + ' × ' + height + ' px'"></span>
+				</div>
+				
+				<div class="bg-zinc-50 p-6 border border-zinc-200 rounded-xl flex items-center justify-center min-h-[400px] overflow-hidden" style="background-image: linear-gradient(45deg, #e4e4e7 25%, transparent 25%), linear-gradient(-45deg, #e4e4e7 25%, transparent 25%), linear-gradient(45deg, transparent 75%, #e4e4e7 75%), linear-gradient(-45deg, transparent 75%, #e4e4e7 75%); background-size: 16px 16px; background-position: 0 0, 0 8px, 8px -8px, -8px 0px;">
+					<img :src="previewDataUrl" alt="Placeholder preview" class="max-w-full max-h-[500px] shadow-sm transition-opacity duration-200" :class="isGenerating ? 'opacity-50' : 'opacity-100'" />
+				</div>
+				
+				<div class="bg-white border border-zinc-200 rounded-lg p-3">
+					<p class="text-xs font-semibold text-zinc-500 uppercase tracking-wider mb-1">Base64 Output (Preview)</p>
+					<textarea readonly x-model="previewDataUrl" rows="3" class="w-full text-[10px] font-mono text-zinc-500 bg-zinc-50 border border-zinc-200 rounded p-2 focus:outline-none resize-none cursor-text"></textarea>
+				</div>
+			</div>
+		</div>
+	</div>
+
+	<script is:inline>
+		document.addEventListener('alpine:init', () => {
+			Alpine.data('placeholderApp', () => ({
+				width: 800,
+				height: 600,
+				bgColor: '#cccccc',
+				textColor: '#666666',
+				customText: '',
+				outputFormat: 'png',
+				selectedPreset: 'default',
+				previewDataUrl: '',
+				isGenerating: false,
+				copiedBase64: false,
+				
+				presets: [
+					{ id: 'default', label: 'Default', width: 800, height: 600 },
+					{ id: 'hd', label: 'Full HD (1080p)', width: 1920, height: 1080 },
+					{ id: 'hdready', label: 'HD Ready (720p)', width: 1280, height: 720 },
+					{ id: 'square', label: 'Square', width: 500, height: 500 },
+					{ id: 'avatar', label: 'Avatar', width: 250, height: 250 },
+					{ id: 'banner', label: 'Web Banner', width: 728, height: 90 },
+					{ id: 'hero', label: 'Hero Image', width: 1440, height: 600 },
+					{ id: 'custom', label: 'Custom', width: null, height: null }
+				],
+
+				init() {
+					this.updatePreview();
+				},
+				
+				applyPreset() {
+					if (this.selectedPreset === 'custom') return;
+					const preset = this.presets.find(p => p.id === this.selectedPreset);
+					if (preset) {
+						this.width = preset.width;
+						this.height = preset.height;
+						this.updatePreview();
+					}
+				},
+				
+				get displayText() {
+					return this.customText.trim() ? this.customText : `${this.width}×${this.height}`;
+				},
+
+				generateSvg() {
+					// Encode HTML entities for SVG text
+					const safeText = this.displayText
+						.replace(/&/g, "&amp;")
+						.replace(/</g, "&lt;")
+						.replace(/>/g, "&gt;")
+						.replace(/"/g, "&quot;")
+						.replace(/'/g, "&#039;");
+					
+					// Responsive font size based on dimensions, capped logically
+					const fontSize = Math.max(12, Math.min(this.width, this.height) * 0.15);
+					
+					const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${this.width}" height="${this.height}" viewBox="0 0 ${this.width} ${this.height}">
+						<rect width="100%" height="100%" fill="${this.bgColor}" />
+						<text x="50%" y="50%" fill="${this.textColor}" font-family="system-ui, -apple-system, sans-serif" font-size="${fontSize}px" font-weight="bold" dominant-baseline="middle" text-anchor="middle">${safeText}</text>
+					</svg>`;
+					
+					return `data:image/svg+xml;base64,${btoa(unescape(encodeURIComponent(svg)))}`;
+				},
+				
+				generateRaster() {
+					const canvas = document.createElement('canvas');
+					canvas.width = this.width;
+					canvas.height = this.height;
+					const ctx = canvas.getContext('2d');
+					
+					// Background
+					ctx.fillStyle = this.bgColor;
+					ctx.fillRect(0, 0, this.width, this.height);
+					
+					// Text
+					const fontSize = Math.max(12, Math.min(this.width, this.height) * 0.15);
+					ctx.fillStyle = this.textColor;
+					ctx.textAlign = 'center';
+					ctx.textBaseline = 'middle';
+					ctx.font = `bold ${fontSize}px system-ui, -apple-system, sans-serif`;
+					
+					// Fallback if custom text is too wide (basic truncation for raster)
+					const maxTextWidth = this.width * 0.9;
+					let textToDraw = this.displayText;
+					if (ctx.measureText(textToDraw).width > maxTextWidth) {
+						// Simple scaling via font size reduction if too wide
+						let currentFontSize = fontSize;
+						while (ctx.measureText(textToDraw).width > maxTextWidth && currentFontSize > 10) {
+							currentFontSize -= 2;
+							ctx.font = `bold ${currentFontSize}px system-ui, -apple-system, sans-serif`;
+						}
+					}
+					
+					ctx.fillText(textToDraw, this.width / 2, this.height / 2);
+					
+					const mime = this.outputFormat === 'webp' ? 'image/webp' : 'image/png';
+					return canvas.toDataURL(mime, 0.9);
+				},
+
+				updatePreview() {
+					// Input validation bounds
+					if (this.width < 1) this.width = 1;
+					if (this.height < 1) this.height = 1;
+					if (this.width > 5000) this.width = 5000;
+					if (this.height > 5000) this.height = 5000;
+					
+					this.isGenerating = true;
+					
+					// Use requestAnimationFrame to not block the UI thread during rapid slider/input changes
+					requestAnimationFrame(() => {
+						try {
+							if (this.outputFormat === 'svg') {
+								this.previewDataUrl = this.generateSvg();
+							} else {
+								this.previewDataUrl = this.generateRaster();
+							}
+						} catch (e) {
+							console.error("Error generating placeholder", e);
+						} finally {
+							this.isGenerating = false;
+						}
+					});
+				},
+				
+				download() {
+					if (!this.previewDataUrl) return;
+					const a = document.createElement('a');
+					a.href = this.previewDataUrl;
+					a.download = `placeholder-${this.width}x${this.height}.${this.outputFormat}`;
+					a.click();
+				},
+				
+				async copyBase64() {
+					if (!this.previewDataUrl) return;
+					try {
+						await navigator.clipboard.writeText(this.previewDataUrl);
+						this.copiedBase64 = true;
+						setTimeout(() => { this.copiedBase64 = false; }, 2000);
+					} catch (err) {
+						console.error('Failed to copy text: ', err);
+					}
+				}
+			}));
+		});
+	</script>
+</Layout>
