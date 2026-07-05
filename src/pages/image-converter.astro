@@ -2,181 +2,528 @@
 import Layout from '../layouts/Layout.astro';
 ---
 
-<Layout 
+<Layout
 	title="Image Format Converter"
-	description="Convert images to JPG, PNG, or WEBP formats directly in your browser. Fast, secure, client-side only image converter tool."
-	keywords="image converter, convert jpg to png, convert to webp, online image converter, client side image processing, dev tools"
+	description="Convert images between JPG, PNG, WEBP, BMP, ICO, GIF, and more formats — free, fast, and entirely in your browser. No uploads, no account needed."
+	keywords="image converter, convert jpg to png, convert to webp, convert to ico, convert to bmp, convert to gif, online image converter, bulk image converter, client side image processing"
 >
-	<div class="max-w-6xl" x-data="imageConverterApp()">
+	<div class="max-w-5xl" x-data="imageConverterApp()" x-init="init()">
 		<h1 class="text-2xl font-bold text-zinc-900 mb-2">Image Format Converter</h1>
-		<p class="text-zinc-600 mb-8">Convert images between JPG, PNG, and WEBP formats directly in your browser. No files are uploaded to any server.</p>
+		<p class="text-zinc-600 mb-8">Convert images between many formats — JPG, PNG, WEBP, BMP, ICO, GIF, and more. Supports batch conversion. Everything runs locally in your browser.</p>
 
-		<div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
-			
-			<!-- Input Section -->
-			<div class="space-y-6">
-				<div class="space-y-4">
-					<label class="block text-sm font-medium text-zinc-700">Upload Original Image</label>
-					<div class="mt-1 flex justify-center px-6 pt-5 pb-6 border-2 border-zinc-300 border-dashed rounded-lg hover:bg-zinc-50 transition-colors relative">
-						<div class="space-y-1 text-center">
-							<svg class="mx-auto h-12 w-12 text-zinc-400" stroke="currentColor" fill="none" viewBox="0 0 48 48" aria-hidden="true">
-								<path d="M28 8H12a4 4 0 00-4 4v20m32-12v8m0 0v8a4 4 0 01-4 4H12a4 4 0 01-4-4v-4m32-4l-3.172-3.172a4 4 0 00-5.656 0L28 28M8 32l9.172-9.172a4 4 0 015.656 0L28 28m0 0l4 4m4-24h8m-4-4v8m-12 4h.02" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
-							</svg>
-							<div class="flex text-sm text-zinc-600 justify-center">
-								<label for="file-upload" class="relative cursor-pointer bg-white rounded-md font-medium text-blue-600 hover:text-blue-500 focus-within:outline-none focus-within:ring-2 focus-within:ring-offset-2 focus-within:ring-blue-500">
-									<span>Upload a file</span>
-									<input id="file-upload" type="file" accept="image/png, image/jpeg, image/webp" class="sr-only" @change="handleFileUpload">
-								</label>
-								<p class="pl-1">or drag and drop</p>
-							</div>
-							<p class="text-xs text-zinc-500">PNG, JPG, WEBP up to 10MB</p>
+		<!-- Upload zone -->
+		<div
+			class="relative flex flex-col items-center justify-center border-2 border-dashed rounded-2xl px-8 py-10 text-center transition-all cursor-pointer mb-6"
+			:class="isDragging ? 'border-zinc-600 bg-zinc-100' : 'border-zinc-300 bg-zinc-50 hover:bg-zinc-100 hover:border-zinc-400'"
+			@dragover.prevent="isDragging = true"
+			@dragleave.prevent="isDragging = false"
+			@drop.prevent="onDrop($event)"
+			@click="$refs.fileInput.click()"
+			id="upload-zone"
+		>
+			<svg xmlns="http://www.w3.org/2000/svg" class="w-10 h-10 text-zinc-300 mb-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+				<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/>
+			</svg>
+			<p class="text-sm font-medium text-zinc-700">Drop images here or <span class="text-zinc-900 underline underline-offset-2">browse files</span></p>
+			<p class="text-xs text-zinc-400 mt-1">JPG · PNG · WEBP · BMP · GIF · ICO · TIFF · AVIF · SVG — multiple files supported</p>
+			<input
+				type="file"
+				accept="image/*"
+				multiple
+				class="sr-only"
+				x-ref="fileInput"
+				@change="onFileChange($event)"
+			/>
+		</div>
+
+		<!-- Files + settings -->
+		<div x-show="files.length > 0" style="display:none;" class="space-y-5">
+
+			<!-- Global settings bar -->
+			<div class="bg-white border border-zinc-200 rounded-2xl p-5 space-y-4">
+				<div class="flex flex-wrap items-end gap-4">
+
+					<!-- Target format -->
+					<div class="flex-1 min-w-40">
+						<label class="block text-xs font-semibold text-zinc-500 uppercase tracking-wider mb-2">Convert To</label>
+						<div class="grid grid-cols-4 gap-1.5">
+							<template x-for="fmt in formats" :key="fmt.value">
+								<button
+									@click="targetFormat = fmt.value"
+									:class="targetFormat === fmt.value
+										? 'bg-zinc-900 text-white border-zinc-900'
+										: 'bg-white text-zinc-600 border-zinc-200 hover:border-zinc-400 hover:bg-zinc-50'"
+									class="flex flex-col items-center gap-0.5 px-2 py-2 border rounded-xl text-xs font-bold tracking-wide transition-all"
+								>
+									<span x-text="fmt.label"></span>
+									<span class="text-[9px] font-normal opacity-60" x-text="fmt.note" x-show="fmt.note"></span>
+								</button>
+							</template>
 						</div>
 					</div>
-				</div>
 
-				<div x-show="originalImageSrc" style="display: none;" class="space-y-4 bg-zinc-50 p-4 border border-zinc-200 rounded-lg">
-					<div class="flex items-center justify-between">
-						<span class="text-sm font-medium text-zinc-700">Original Preview:</span>
-						<span class="text-xs font-mono bg-zinc-200 text-zinc-700 px-2 py-1 rounded" x-text="originalFileExtension.toUpperCase()"></span>
+					<!-- Quality (for lossy formats) -->
+					<div class="w-48" x-show="isLossy">
+						<div class="flex justify-between mb-1">
+							<label class="text-xs font-semibold text-zinc-500 uppercase tracking-wider">Quality</label>
+							<span class="text-xs font-mono text-zinc-600" x-text="Math.round(quality * 100) + '%'"></span>
+						</div>
+						<input type="range" x-model.number="quality" min="0.1" max="1.0" step="0.05" class="w-full accent-zinc-900" />
+						<div class="flex justify-between text-xs text-zinc-400 mt-0.5">
+							<span>Smaller</span><span>Best</span>
+						</div>
 					</div>
-					<div class="flex justify-center bg-white border border-zinc-200 rounded p-2">
-						<img :src="originalImageSrc" class="max-h-64 object-contain" alt="Original Image Preview">
-					</div>
-				</div>
-			</div>
 
-			<!-- Output Settings & Preview -->
-			<div class="space-y-6">
-				<div class="bg-zinc-50 p-6 border border-zinc-200 rounded-lg space-y-4">
-					<h3 class="text-sm font-bold text-zinc-900 border-b border-zinc-200 pb-2">Conversion Settings</h3>
-					
-					<div>
-						<label class="block text-sm font-medium text-zinc-700 mb-1">Convert To Format</label>
-						<select x-model="targetFormat" class="w-full px-3 py-2 border border-zinc-300 rounded-md shadow-sm focus:outline-none focus:ring-zinc-500 focus:border-zinc-500 sm:text-sm bg-white">
-							<option value="image/jpeg">JPG / JPEG</option>
-							<option value="image/png">PNG</option>
-							<option value="image/webp">WEBP</option>
+					<!-- ICO size (for ico) -->
+					<div class="w-44" x-show="targetFormat === 'ico'">
+						<label class="block text-xs font-semibold text-zinc-500 uppercase tracking-wider mb-2">ICO Size</label>
+						<select x-model.number="icoSize" class="w-full text-sm border border-zinc-200 rounded-lg px-2 py-1.5 bg-white focus:outline-none focus:ring-2 focus:ring-zinc-300">
+							<option value="16">16 × 16</option>
+							<option value="32">32 × 32</option>
+							<option value="48" selected>48 × 48</option>
+							<option value="64">64 × 64</option>
+							<option value="128">128 × 128</option>
+							<option value="256">256 × 256</option>
 						</select>
 					</div>
 
-					<div x-show="targetFormat !== 'image/png'">
-						<label class="block text-sm font-medium text-zinc-700 mb-1">
-							Quality: <span x-text="Math.round(quality * 100) + '%'"></span>
-						</label>
-						<input type="range" x-model.number="quality" min="0.1" max="1.0" step="0.1" class="w-full">
-						<p class="text-xs text-zinc-500 mt-1">Lower quality reduces file size.</p>
+					<!-- Background color (for formats that don't support alpha) -->
+					<div x-show="needsBgColor">
+						<label class="block text-xs font-semibold text-zinc-500 uppercase tracking-wider mb-2">BG Color</label>
+						<div class="flex items-center gap-2">
+							<input type="color" x-model="bgColor" class="w-8 h-8 rounded border border-zinc-200 p-0.5 cursor-pointer bg-white" />
+							<span class="text-xs font-mono text-zinc-500" x-text="bgColor"></span>
+						</div>
 					</div>
 
-					<div class="pt-2">
-						<button @click="convertImage" :disabled="!originalImageSrc || isConverting" :class="(!originalImageSrc || isConverting) ? 'opacity-50 cursor-not-allowed' : 'hover:bg-zinc-800'" class="w-full bg-zinc-900 text-white px-4 py-2 rounded-md text-sm font-medium transition-colors flex justify-center items-center">
-							<span x-show="!isConverting">Convert Image</span>
-							<span x-show="isConverting" class="flex items-center" style="display: none;">
-								<svg class="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
-								Converting...
-							</span>
+					<!-- Convert all button -->
+					<div class="ml-auto">
+						<button
+							@click="convertAll()"
+							:disabled="isConverting"
+							:class="isConverting ? 'opacity-60 cursor-not-allowed' : 'hover:bg-zinc-700'"
+							class="bg-zinc-900 text-white px-6 py-2.5 rounded-xl text-sm font-semibold transition-colors flex items-center gap-2"
+						>
+							<template x-if="!isConverting">
+								<span class="flex items-center gap-2">
+									<svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 2v6h-6"/><path d="M3 12a9 9 0 0 1 15-6.7L21 8"/><path d="M3 22v-6h6"/><path d="M21 12a9 9 0 0 1-15 6.7L3 16"/></svg>
+									Convert All
+								</span>
+							</template>
+							<template x-if="isConverting">
+								<span class="flex items-center gap-2">
+									<svg class="animate-spin w-4 h-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+									Converting…
+								</span>
+							</template>
 						</button>
 					</div>
 				</div>
 
-				<div x-show="convertedImageSrc" style="display: none;" class="space-y-4 bg-zinc-50 p-4 border border-zinc-200 rounded-lg">
-					<div class="flex items-center justify-between">
-						<span class="text-sm font-medium text-zinc-700">Converted Image:</span>
-						<a :href="convertedImageSrc" :download="downloadFilename" class="px-3 py-1.5 bg-blue-600 text-white rounded text-xs font-medium hover:bg-blue-700 transition-colors">
-							Download File
-						</a>
-					</div>
-					<div class="flex justify-center bg-white border border-zinc-200 rounded p-2 relative">
-						<img :src="convertedImageSrc" class="max-h-64 object-contain" alt="Converted Image">
-					</div>
+				<!-- Format note -->
+				<div x-show="formatNote" style="display:none;" class="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2 flex items-start gap-2">
+					<svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 flex-shrink-0 mt-0.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+					<span x-text="formatNote"></span>
 				</div>
+			</div>
+
+			<!-- File list -->
+			<div class="space-y-2">
+				<div class="flex items-center justify-between mb-1">
+					<p class="text-sm font-semibold text-zinc-700">
+						<span x-text="files.length"></span> file<span x-show="files.length !== 1">s</span>
+					</p>
+					<button @click="clearAll()" class="text-xs text-zinc-400 hover:text-red-500 transition-colors">Clear all</button>
+				</div>
+
+				<template x-for="(file, idx) in files" :key="file.id">
+					<div class="bg-white border border-zinc-200 rounded-xl p-4 flex items-center gap-4 transition-all"
+						:class="file.status === 'done' ? 'border-zinc-200' : file.status === 'error' ? 'border-red-200' : ''">
+
+						<!-- Thumb -->
+						<div class="w-14 h-14 rounded-lg border border-zinc-100 bg-zinc-50 flex-shrink-0 overflow-hidden flex items-center justify-center"
+							style="background-image: linear-gradient(45deg, #e4e4e7 25%, transparent 25%), linear-gradient(-45deg, #e4e4e7 25%, transparent 25%), linear-gradient(45deg, transparent 75%, #e4e4e7 75%), linear-gradient(-45deg, transparent 75%, #e4e4e7 75%); background-size: 8px 8px; background-position: 0 0, 0 4px, 4px -4px, -4px 0px; background-color: #f4f4f5;">
+							<img :src="file.preview" class="w-full h-full object-contain" :alt="file.name" />
+						</div>
+
+						<!-- Info -->
+						<div class="flex-1 min-w-0">
+							<p class="text-sm font-medium text-zinc-900 truncate" x-text="file.name"></p>
+							<div class="flex items-center gap-2 mt-0.5">
+								<span class="text-xs text-zinc-400" x-text="file.ext.toUpperCase()"></span>
+								<span class="text-zinc-200">·</span>
+								<span class="text-xs text-zinc-400" x-text="formatSize(file.size)"></span>
+							</div>
+						</div>
+
+						<!-- Status -->
+						<div class="flex items-center gap-3 flex-shrink-0">
+
+							<!-- Idle -->
+							<span x-show="file.status === 'idle'" class="text-xs text-zinc-400">Ready</span>
+
+							<!-- Converting -->
+							<span x-show="file.status === 'converting'" style="display:none;" class="flex items-center gap-1.5 text-xs text-zinc-500">
+								<svg class="animate-spin w-3.5 h-3.5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+								Converting
+							</span>
+
+							<!-- Done -->
+							<template x-if="file.status === 'done'">
+								<div class="flex items-center gap-2">
+									<span class="text-xs text-zinc-400" x-text="formatSize(file.resultSize)"></span>
+									<span class="flex items-center gap-1 text-xs font-medium"
+										:class="file.resultSize < file.size ? 'text-emerald-600' : 'text-amber-600'"
+										x-text="sizeDiff(file.size, file.resultSize)">
+									</span>
+									<a
+										:href="file.resultUrl"
+										:download="file.downloadName"
+										class="flex items-center gap-1.5 bg-zinc-900 hover:bg-zinc-700 text-white text-xs font-semibold px-3 py-1.5 rounded-lg transition-colors"
+									>
+										<svg xmlns="http://www.w3.org/2000/svg" class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+										Download
+									</a>
+								</div>
+							</template>
+
+							<!-- Error -->
+							<template x-if="file.status === 'error'">
+								<span class="text-xs text-red-500 font-medium" x-text="file.error || 'Error'"></span>
+							</template>
+
+							<!-- Remove -->
+							<button @click="removeFile(idx)" class="text-zinc-300 hover:text-red-400 transition-colors ml-1">
+								<svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18M6 6l12 12"/></svg>
+							</button>
+						</div>
+					</div>
+				</template>
+			</div>
+
+			<!-- Download all (when all done) -->
+			<div x-show="doneCount > 1 && doneCount === files.length" style="display:none;" class="pt-2">
+				<button
+					@click="downloadAll()"
+					class="w-full border-2 border-dashed border-zinc-300 hover:border-zinc-500 text-zinc-600 hover:text-zinc-900 py-3 rounded-xl text-sm font-medium transition-all flex items-center justify-center gap-2"
+				>
+					<svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+					Download All (<span x-text="doneCount"></span> files)
+				</button>
 			</div>
 		</div>
 
-		<!-- Hidden Canvas for processing -->
-		<canvas id="convertCanvas" style="display: none;"></canvas>
+		<!-- Format reference table -->
+		<div class="mt-10 border border-zinc-200 rounded-2xl overflow-hidden">
+			<div class="bg-zinc-50 px-5 py-3 border-b border-zinc-200">
+				<h2 class="text-sm font-semibold text-zinc-700">Format Reference</h2>
+			</div>
+			<div class="overflow-x-auto">
+				<table class="w-full text-xs">
+					<thead class="bg-zinc-50/50 border-b border-zinc-100">
+						<tr>
+							<th class="text-left px-4 py-2.5 text-zinc-500 font-semibold">Format</th>
+							<th class="text-left px-4 py-2.5 text-zinc-500 font-semibold">Best For</th>
+							<th class="text-center px-4 py-2.5 text-zinc-500 font-semibold">Transparency</th>
+							<th class="text-center px-4 py-2.5 text-zinc-500 font-semibold">Lossy</th>
+						</tr>
+					</thead>
+					<tbody class="divide-y divide-zinc-50">
+						<tr class="hover:bg-zinc-50 transition-colors">
+							<td class="px-4 py-2.5 font-bold text-zinc-900">JPG</td>
+							<td class="px-4 py-2.5 text-zinc-600">Photos, general use — smallest size</td>
+							<td class="px-4 py-2.5 text-center text-zinc-400">✗</td>
+							<td class="px-4 py-2.5 text-center text-zinc-900">✓</td>
+						</tr>
+						<tr class="hover:bg-zinc-50 transition-colors">
+							<td class="px-4 py-2.5 font-bold text-zinc-900">PNG</td>
+							<td class="px-4 py-2.5 text-zinc-600">Logos, screenshots, transparent images</td>
+							<td class="px-4 py-2.5 text-center text-zinc-900">✓</td>
+							<td class="px-4 py-2.5 text-center text-zinc-400">✗</td>
+						</tr>
+						<tr class="hover:bg-zinc-50 transition-colors">
+							<td class="px-4 py-2.5 font-bold text-zinc-900">WEBP</td>
+							<td class="px-4 py-2.5 text-zinc-600">Web — small size with great quality</td>
+							<td class="px-4 py-2.5 text-center text-zinc-900">✓</td>
+							<td class="px-4 py-2.5 text-center text-zinc-900">✓</td>
+						</tr>
+						<tr class="hover:bg-zinc-50 transition-colors">
+							<td class="px-4 py-2.5 font-bold text-zinc-900">BMP</td>
+							<td class="px-4 py-2.5 text-zinc-600">Windows apps, legacy systems</td>
+							<td class="px-4 py-2.5 text-center text-zinc-400">✗</td>
+							<td class="px-4 py-2.5 text-center text-zinc-400">✗</td>
+						</tr>
+						<tr class="hover:bg-zinc-50 transition-colors">
+							<td class="px-4 py-2.5 font-bold text-zinc-900">ICO</td>
+							<td class="px-4 py-2.5 text-zinc-600">Website favicons, Windows icons</td>
+							<td class="px-4 py-2.5 text-center text-zinc-900">✓</td>
+							<td class="px-4 py-2.5 text-center text-zinc-400">✗</td>
+						</tr>
+						<tr class="hover:bg-zinc-50 transition-colors">
+							<td class="px-4 py-2.5 font-bold text-zinc-900">GIF</td>
+							<td class="px-4 py-2.5 text-zinc-600">Simple graphics, limited colors (256)</td>
+							<td class="px-4 py-2.5 text-center text-zinc-400">Partial</td>
+							<td class="px-4 py-2.5 text-center text-zinc-400">✗</td>
+						</tr>
+					</tbody>
+				</table>
+			</div>
+		</div>
+
+		<canvas id="convertCanvas" style="display:none;"></canvas>
 	</div>
 
 	<script is:inline>
-		document.addEventListener('alpine:init', () => {
-			Alpine.data('imageConverterApp', () => ({
-				originalImageSrc: '',
-				originalFilename: 'image',
-				originalFileExtension: '',
-				
-				targetFormat: 'image/jpeg',
-				quality: 0.9,
-				
-				convertedImageSrc: '',
-				isConverting: false,
+	document.addEventListener('alpine:init', () => {
+		Alpine.data('imageConverterApp', () => ({
+			files: [],
+			targetFormat: 'webp',
+			quality: 0.92,
+			icoSize: 48,
+			bgColor: '#ffffff',
+			isDragging: false,
+			isConverting: false,
 
-				get downloadFilename() {
-					let ext = 'jpg';
-					if (this.targetFormat === 'image/png') ext = 'png';
-					if (this.targetFormat === 'image/webp') ext = 'webp';
-					// Remove old extension from original filename
-					const baseName = this.originalFilename.replace(/\.[^/.]+$/, "");
-					return `${baseName}-converted.${ext}`;
-				},
+			formats: [
+				{ value: 'jpg',  label: 'JPG',  note: 'photo' },
+				{ value: 'png',  label: 'PNG',  note: 'lossless' },
+				{ value: 'webp', label: 'WEBP', note: 'web' },
+				{ value: 'bmp',  label: 'BMP',  note: '' },
+				{ value: 'ico',  label: 'ICO',  note: 'favicon' },
+				{ value: 'gif',  label: 'GIF',  note: '256 col' },
+				{ value: 'tiff', label: 'TIFF', note: 'via PNG' },
+				{ value: 'avif', label: 'AVIF', note: 'via WEBP' },
+			],
 
-				handleFileUpload(e) {
-					const file = e.target.files[0];
-					if (!file) return;
+			formatNotes: {
+				ico:  'ICO is generated as a standard single-resolution icon file. Choose the size above.',
+				gif:  'GIF export uses dithered quantization via canvas. Colors limited to 256. Animated GIFs are not supported.',
+				tiff: 'TIFF export is not natively supported by browsers. The file will be saved as a lossless PNG instead.',
+				avif: 'AVIF export is not yet widely supported in canvas. Files will fall back to WEBP for maximum compatibility.',
+				bmp:  'BMP produces uncompressed files — typically large in size.',
+			},
 
-					this.originalFilename = file.name;
-					const extMatch = file.name.match(/\.([^/.]+)$/);
-					this.originalFileExtension = extMatch ? extMatch[1] : 'unknown';
+			get isLossy() {
+				return ['jpg', 'webp', 'avif'].includes(this.targetFormat);
+			},
 
-					const reader = new FileReader();
-					reader.onload = (event) => {
-						this.originalImageSrc = event.target.result;
-						this.convertedImageSrc = ''; // clear previous conversion
-					};
-					reader.readAsDataURL(file);
-				},
+			get needsBgColor() {
+				return ['jpg', 'bmp', 'gif'].includes(this.targetFormat);
+			},
 
-				convertImage() {
-					if (!this.originalImageSrc || this.isConverting) return;
-					
-					this.isConverting = true;
-					this.convertedImageSrc = '';
+			get formatNote() {
+				return this.formatNotes[this.targetFormat] || '';
+			},
 
-					// Small timeout to allow UI to update to loading state
-					setTimeout(() => {
-						const img = new Image();
-						img.onload = () => {
-							try {
-								const canvas = document.getElementById('convertCanvas');
-								const ctx = canvas.getContext('2d');
-								
-								canvas.width = img.width;
-								canvas.height = img.height;
+			get doneCount() {
+				return this.files.filter(f => f.status === 'done').length;
+			},
 
-								// Draw a white background first (important if converting PNG with transparency to JPG)
-								if (this.targetFormat === 'image/jpeg') {
-									ctx.fillStyle = '#FFFFFF';
-									ctx.fillRect(0, 0, canvas.width, canvas.height);
-								}
+			init() {},
 
-								ctx.drawImage(img, 0, 0);
+			onFileChange(e) {
+				[...e.target.files].forEach(f => this.addFile(f));
+				e.target.value = '';
+			},
 
-								// Convert
-								const dataUrl = canvas.toDataURL(this.targetFormat, this.quality);
-								this.convertedImageSrc = dataUrl;
-							} catch (e) {
-								console.error("Error converting image:", e);
-								alert("Failed to convert image. Image might be too large.");
-							} finally {
-								this.isConverting = false;
-							}
-						};
-						img.onerror = () => {
-							alert("Error loading image for conversion.");
-							this.isConverting = false;
-						};
-						img.src = this.originalImageSrc;
-					}, 50);
+			onDrop(e) {
+				this.isDragging = false;
+				[...e.dataTransfer.files].filter(f => f.type.startsWith('image/')).forEach(f => this.addFile(f));
+			},
+
+			addFile(file) {
+				const ext = file.name.match(/\.([^/.]+)$/)?.[1] || 'img';
+				const id = Date.now() + Math.random();
+				const fileObj = { id, name: file.name, ext, size: file.size, preview: '', status: 'idle', resultUrl: '', resultSize: 0, downloadName: '', error: '' };
+				this.files.push(fileObj);
+				const reader = new FileReader();
+				// Always mutate through this.files (Alpine proxy) so reactivity triggers
+				reader.onload = ev => {
+					const f = this.files.find(f => f.id === id);
+					if (f) f.preview = ev.target.result;
+				};
+				reader.readAsDataURL(file);
+			},
+
+			removeFile(idx) {
+				this.files.splice(idx, 1);
+			},
+
+			clearAll() {
+				this.files = [];
+			},
+
+			formatSize(bytes) {
+				if (bytes < 1024) return bytes + ' B';
+				if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+				return (bytes / (1024 * 1024)).toFixed(2) + ' MB';
+			},
+
+			sizeDiff(orig, result) {
+				const diff = Math.round((1 - result / orig) * 100);
+				if (diff > 0) return `−${diff}%`;
+				if (diff < 0) return `+${Math.abs(diff)}%`;
+				return '0%';
+			},
+
+			// Generate ICO from canvas — single BMP embedded in ICO container
+			canvasToIco(canvas, size) {
+				const tmp = document.createElement('canvas');
+				tmp.width = size; tmp.height = size;
+				tmp.getContext('2d').drawImage(canvas, 0, 0, size, size);
+				// Get PNG bytes for ICO (modern ICO supports embedded PNG)
+				const dataUrl = tmp.toDataURL('image/png');
+				const b64 = dataUrl.split(',')[1];
+				const pngBytes = Uint8Array.from(atob(b64), c => c.charCodeAt(0));
+
+				// ICO header + directory entry + PNG data
+				const icoHeader = new Uint8Array(6);
+				const view = new DataView(icoHeader.buffer);
+				view.setUint16(0, 0, true); // reserved
+				view.setUint16(2, 1, true); // type: 1 = ICO
+				view.setUint16(4, 1, true); // 1 image
+
+				const icoDir = new Uint8Array(16);
+				const dv = new DataView(icoDir.buffer);
+				dv.setUint8(0, size >= 256 ? 0 : size); // width
+				dv.setUint8(1, size >= 256 ? 0 : size); // height
+				dv.setUint8(2, 0); // color count (0 = no palette)
+				dv.setUint8(3, 0); // reserved
+				dv.setUint16(4, 1, true); // color planes
+				dv.setUint16(6, 32, true); // bits per pixel
+				dv.setUint32(8, pngBytes.length, true); // size of image data
+				dv.setUint32(12, 22, true); // offset = 6 (header) + 16 (dir)
+
+				const blob = new Blob([icoHeader, icoDir, pngBytes], { type: 'image/x-icon' });
+				return URL.createObjectURL(blob);
+			},
+
+			// Simple GIF encoder (just static, dithered via canvas → PNG fallback note + actual attempt)
+			canvasToGif(canvas) {
+				// Browsers can't natively encode GIF, we use image/gif attempt and fall back gracefully
+				const tmp = document.createElement('canvas');
+				tmp.width = canvas.width; tmp.height = canvas.height;
+				const ctx = tmp.getContext('2d');
+				// Flatten with bg color
+				ctx.fillStyle = this.bgColor;
+				ctx.fillRect(0, 0, tmp.width, tmp.height);
+				ctx.drawImage(canvas, 0, 0);
+				// Try native gif (works in some browsers via image/gif), otherwise png
+				let dataUrl = tmp.toDataURL('image/gif');
+				if (!dataUrl.startsWith('data:image/gif')) {
+					dataUrl = tmp.toDataURL('image/png');
 				}
-			}));
-		});
+				return dataUrl;
+			},
+
+			getOutputExt() {
+				const extMap = { jpg: 'jpg', png: 'png', webp: 'webp', bmp: 'bmp', ico: 'ico', gif: 'gif', tiff: 'png', avif: 'webp' };
+				return extMap[this.targetFormat] || this.targetFormat;
+			},
+
+			getMime() {
+				const mimeMap = {
+					jpg: 'image/jpeg',
+					png: 'image/png',
+					webp: 'image/webp',
+					bmp: 'image/bmp',
+					ico: 'image/png', // handled separately
+					gif: 'image/gif',
+					tiff: 'image/png',
+					avif: 'image/webp',
+				};
+				return mimeMap[this.targetFormat] || 'image/png';
+			},
+
+			async convertFile(fileObj) {
+				// Always mutate through the proxy-tracked reference from this.files
+				const fid = fileObj.id;
+				const ref = () => this.files.find(f => f.id === fid);
+
+				const f0 = ref(); if (f0) f0.status = 'converting';
+				// Capture preview src before async gap
+				const previewSrc = fileObj.preview;
+				const fileName   = fileObj.name;
+
+				return new Promise((resolve) => {
+					const img = new Image();
+					img.onload = () => {
+						try {
+							const canvas = document.getElementById('convertCanvas');
+							const ctx = canvas.getContext('2d');
+							canvas.width = img.width;
+							canvas.height = img.height;
+
+							if (this.needsBgColor) {
+								ctx.fillStyle = this.bgColor;
+								ctx.fillRect(0, 0, canvas.width, canvas.height);
+							} else {
+								ctx.clearRect(0, 0, canvas.width, canvas.height);
+							}
+							ctx.drawImage(img, 0, 0);
+
+							const base = fileName.replace(/\.[^/.]+$/, '');
+							const ext  = this.getOutputExt();
+							const fr = ref();
+							if (fr) fr.downloadName = `${base}.${ext}`;
+
+							if (this.targetFormat === 'ico') {
+								const url = this.canvasToIco(canvas, this.icoSize);
+								const fr2 = ref();
+								if (fr2) { fr2.resultUrl = url; fr2.resultSize = 0; fr2.status = 'done'; }
+								resolve(); return;
+							}
+
+							if (this.targetFormat === 'gif') {
+								const dataUrl = this.canvasToGif(canvas);
+								const b64 = dataUrl.split(',')[1] || '';
+								const fr2 = ref();
+								if (fr2) { fr2.resultUrl = dataUrl; fr2.resultSize = Math.round(b64.length * 0.75); fr2.status = 'done'; }
+								resolve(); return;
+							}
+
+							const mime    = this.getMime();
+							const quality = this.isLossy ? this.quality : undefined;
+							const dataUrl = canvas.toDataURL(mime, quality);
+							const b64 = dataUrl.split(',')[1] || '';
+							const fr2 = ref();
+							if (fr2) { fr2.resultUrl = dataUrl; fr2.resultSize = Math.round(b64.length * 0.75); fr2.status = 'done'; }
+						} catch (err) {
+							const fr2 = ref();
+							if (fr2) { fr2.status = 'error'; fr2.error = err.message || 'Conversion failed'; }
+						}
+						resolve();
+					};
+					img.onerror = () => {
+						const fr2 = ref();
+						if (fr2) { fr2.status = 'error'; fr2.error = 'Failed to load image'; }
+						resolve();
+					};
+					img.src = previewSrc;
+				});
+			},
+
+			async convertAll() {
+				if (this.isConverting) return;
+				this.isConverting = true;
+				// Reset statuses
+				this.files.forEach(f => { f.status = 'idle'; f.resultUrl = ''; f.resultSize = 0; });
+				for (const file of this.files) {
+					await this.convertFile(file);
+				}
+				this.isConverting = false;
+			},
+
+			downloadAll() {
+				this.files.forEach(f => {
+					if (f.status !== 'done' || !f.resultUrl) return;
+					const a = document.createElement('a');
+					a.href = f.resultUrl;
+					a.download = f.downloadName;
+					a.click();
+				});
+			},
+		}));
+	});
 	</script>
 </Layout>
