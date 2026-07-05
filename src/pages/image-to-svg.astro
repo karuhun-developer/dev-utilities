@@ -1,0 +1,289 @@
+---
+import Layout from '../layouts/Layout.astro';
+---
+
+<Layout
+	title="Image to SVG Vector"
+	description="Convert raster images (PNG, JPG, WEBP) to scalable vector graphics (SVG) online using client-side image tracing. Free and runs in your browser."
+	keywords="image to svg, raster to vector, vectorizer, trace image, convert png to svg, online svg converter, image tracing"
+>
+	<!-- Load ImageTracerJS -->
+	<script is:inline src="https://unpkg.com/imagetracerjs@1.2.6/imagetracer_v1.2.6.js"></script>
+
+	<div class="max-w-6xl" x-data="imageToSvgApp()" x-init="init()">
+		<h1 class="text-2xl font-bold text-zinc-900 mb-2">Image to SVG Vector</h1>
+		<p class="text-zinc-600 mb-8">Convert raster images (PNG, JPG, WEBP) to scalable vector graphics (SVG). The vectorization runs entirely in your browser — no uploads.</p>
+
+		<div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+			
+			<!-- Input Section -->
+			<div class="space-y-6">
+				<!-- Drop zone -->
+				<div>
+					<label class="block text-sm font-medium text-zinc-700 mb-2">Upload Original Image</label>
+					<div
+						class="relative flex flex-col items-center justify-center border-2 border-dashed rounded-xl p-8 text-center transition-colors cursor-pointer"
+						:class="isDragging ? 'border-zinc-500 bg-zinc-100' : 'border-zinc-300 bg-zinc-50 hover:bg-zinc-100 hover:border-zinc-400'"
+						@dragover.prevent="isDragging = true"
+						@dragleave.prevent="isDragging = false"
+						@drop.prevent="onDrop($event)"
+						@click="$refs.fileInput.click()"
+					>
+						<svg xmlns="http://www.w3.org/2000/svg" class="w-10 h-10 text-zinc-300 mb-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+							<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/>
+						</svg>
+						<p class="text-sm font-medium text-zinc-600">Drop an image here or <span class="text-zinc-900 underline underline-offset-2">browse</span></p>
+						<p class="text-xs text-zinc-400 mt-1">PNG, JPG, WEBP — recommended simple shapes or logos</p>
+						<input
+							type="file"
+							accept="image/png, image/jpeg, image/webp, image/bmp"
+							class="sr-only"
+							x-ref="fileInput"
+							@change="onFileChange($event)"
+						/>
+					</div>
+				</div>
+
+				<div x-show="originalImageSrc" style="display: none;" class="space-y-4 bg-white border border-zinc-200 rounded-xl p-5">
+					<h3 class="text-sm font-bold text-zinc-900 border-b border-zinc-200 pb-2 mb-4">Tracing Settings</h3>
+					
+					<!-- Preset Options -->
+					<div class="mb-4">
+						<label class="block text-sm font-medium text-zinc-700 mb-2">Presets</label>
+						<div class="grid grid-cols-2 sm:grid-cols-3 gap-2">
+							<template x-for="preset in presets" :key="preset.id">
+								<button
+									@click="applyPreset(preset.id)"
+									:class="selectedPreset === preset.id ? 'bg-zinc-900 text-white border-zinc-900' : 'bg-white text-zinc-600 border-zinc-200 hover:border-zinc-400'"
+									class="px-2 py-1.5 rounded-lg border text-xs font-semibold tracking-wide transition-all"
+									x-text="preset.label"
+								></button>
+							</template>
+						</div>
+					</div>
+
+					<div class="space-y-4">
+						<div>
+							<div class="flex justify-between mb-1">
+								<label class="text-xs font-semibold text-zinc-500 uppercase tracking-wider">Number of Colors</label>
+								<span class="text-xs font-mono text-zinc-600" x-text="options.numberofcolors"></span>
+							</div>
+							<input type="range" x-model.number="options.numberofcolors" min="2" max="64" step="1" class="w-full accent-zinc-900" />
+						</div>
+
+						<div>
+							<div class="flex justify-between mb-1">
+								<label class="text-xs font-semibold text-zinc-500 uppercase tracking-wider">Color Quantization Cycles</label>
+								<span class="text-xs font-mono text-zinc-600" x-text="options.colorquantcycles"></span>
+							</div>
+							<input type="range" x-model.number="options.colorquantcycles" min="1" max="10" step="1" class="w-full accent-zinc-900" />
+						</div>
+
+						<div>
+							<div class="flex justify-between mb-1">
+								<label class="text-xs font-semibold text-zinc-500 uppercase tracking-wider">Path Min. Length (Speckle Removal)</label>
+								<span class="text-xs font-mono text-zinc-600" x-text="options.mincolorratio"></span>
+							</div>
+							<input type="range" x-model.number="options.mincolorratio" min="0" max="100" step="1" class="w-full accent-zinc-900" />
+							<p class="text-[10px] text-zinc-400 mt-1">Higher values remove small noise/speckles.</p>
+						</div>
+
+						<div>
+							<div class="flex justify-between mb-1">
+								<label class="text-xs font-semibold text-zinc-500 uppercase tracking-wider">Blur Radius</label>
+								<span class="text-xs font-mono text-zinc-600" x-text="options.blurradius"></span>
+							</div>
+							<input type="range" x-model.number="options.blurradius" min="0" max="5" step="0.1" class="w-full accent-zinc-900" />
+							<p class="text-[10px] text-zinc-400 mt-1">Pre-process blur to soften edges.</p>
+						</div>
+					</div>
+
+					<div class="pt-4">
+						<button @click="convertToSvg" :disabled="!originalImageSrc || isProcessing" :class="(!originalImageSrc || isProcessing) ? 'opacity-50 cursor-not-allowed' : 'hover:bg-zinc-800'" class="w-full bg-zinc-900 text-white px-4 py-2.5 rounded-xl text-sm font-semibold transition-colors flex justify-center items-center">
+							<span x-show="!isProcessing" class="flex items-center gap-2">
+								<svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 2v6h-6"/><path d="M3 12a9 9 0 0 1 15-6.7L21 8"/><path d="M3 22v-6h6"/><path d="M21 12a9 9 0 0 1-15 6.7L3 16"/></svg>
+								Vectorize to SVG
+							</span>
+							<span x-show="isProcessing" class="flex items-center gap-2" style="display: none;">
+								<svg class="animate-spin w-4 h-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+								Tracing...
+							</span>
+						</button>
+					</div>
+				</div>
+			</div>
+
+			<!-- Output Preview -->
+			<div class="space-y-4">
+				
+				<div x-show="originalImageSrc" style="display:none;" class="flex items-center gap-2">
+					<button
+						@click="previewTab = 'original'"
+						:class="previewTab === 'original' ? 'bg-zinc-900 text-white' : 'bg-white text-zinc-600 border border-zinc-200 hover:border-zinc-400'"
+						class="px-4 py-1.5 rounded-lg text-xs font-semibold transition-all"
+					>Original Raster</button>
+					<button
+						@click="previewTab = 'result'"
+						:disabled="!resultSvgSrc"
+						:class="[previewTab === 'result' ? 'bg-zinc-900 text-white' : 'bg-white text-zinc-600 border border-zinc-200 hover:border-zinc-400', !resultSvgSrc ? 'opacity-40 cursor-not-allowed' : '']"
+						class="px-4 py-1.5 rounded-lg text-xs font-semibold transition-all"
+					>SVG Vector</button>
+				</div>
+
+				<div class="bg-zinc-50 p-4 border border-zinc-200 rounded-xl flex items-center justify-center min-h-[400px] relative overflow-hidden" style="background-image: linear-gradient(45deg, #e4e4e7 25%, transparent 25%), linear-gradient(-45deg, #e4e4e7 25%, transparent 25%), linear-gradient(45deg, transparent 75%, #e4e4e7 75%), linear-gradient(-45deg, transparent 75%, #e4e4e7 75%); background-size: 16px 16px; background-position: 0 0, 0 8px, 8px -8px, -8px 0px; background-color: #f4f4f5;">
+					
+					<div x-show="!originalImageSrc" class="text-center p-10 bg-white/80 rounded-xl backdrop-blur-sm shadow-sm">
+						<p class="text-sm text-zinc-500 font-medium">Result will appear here</p>
+					</div>
+
+					<img
+						x-show="originalImageSrc && previewTab === 'original'"
+						style="display:none;"
+						:src="originalImageSrc"
+						alt="Original Raster"
+						class="max-w-full max-h-[500px] object-contain p-2"
+					/>
+
+					<img
+						x-show="resultSvgSrc && previewTab === 'result'"
+						style="display:none;"
+						:src="resultSvgSrc"
+						alt="SVG Result"
+						class="max-w-full max-h-[500px] object-contain p-2"
+					/>
+					
+					<div x-show="!resultSvgSrc && previewTab === 'result'" class="text-center p-10 bg-white/80 rounded-xl backdrop-blur-sm shadow-sm" style="display:none;">
+						<p class="text-sm text-zinc-500 font-medium">Click "Vectorize to SVG" to see result</p>
+					</div>
+				</div>
+
+				<div x-show="resultSvgSrc" style="display: none;" class="bg-white border border-zinc-200 rounded-xl p-4 flex items-center justify-between">
+					<div>
+						<p class="text-xs font-semibold text-zinc-400 uppercase tracking-wider mb-0.5">Ready for Download</p>
+						<p class="text-sm text-zinc-700 font-medium" x-text="downloadFilename"></p>
+					</div>
+					<a :href="resultSvgSrc" :download="downloadFilename" class="flex items-center gap-2 bg-zinc-900 hover:bg-zinc-700 text-white text-sm font-semibold px-4 py-2 rounded-xl transition-colors flex-shrink-0">
+						<svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+						Download SVG
+					</a>
+				</div>
+			</div>
+		</div>
+	</div>
+
+	<script is:inline>
+		document.addEventListener('alpine:init', () => {
+			Alpine.data('imageToSvgApp', () => ({
+				originalImageSrc: '',
+				originalFilename: 'image',
+				originalFileObject: null,
+				
+				resultSvgStr: '',
+				resultSvgSrc: '',
+				isProcessing: false,
+				isDragging: false,
+				previewTab: 'original',
+				
+				selectedPreset: 'default',
+				
+				presets: [
+					{ id: 'default', label: 'Default', opts: { numberofcolors: 16, colorquantcycles: 3, mincolorratio: 0, blurradius: 0 } },
+					{ id: 'posterized', label: 'Posterized', opts: { numberofcolors: 4, colorquantcycles: 3, mincolorratio: 0, blurradius: 0.5 } },
+					{ id: 'artwork', label: 'Artwork', opts: { numberofcolors: 32, colorquantcycles: 5, mincolorratio: 0, blurradius: 0 } },
+					{ id: 'logo', label: 'Clean Logo', opts: { numberofcolors: 8, colorquantcycles: 3, mincolorratio: 50, blurradius: 1 } },
+					{ id: 'photo', label: 'Photo (Detailed)', opts: { numberofcolors: 64, colorquantcycles: 3, mincolorratio: 0, blurradius: 0 } },
+				],
+				
+				options: {
+					numberofcolors: 16,
+					colorquantcycles: 3,
+					mincolorratio: 0,
+					blurradius: 0
+				},
+
+				get downloadFilename() {
+					const baseName = this.originalFilename.replace(/\.[^/.]+$/, '');
+					return `${baseName}-vector.svg`;
+				},
+
+				init() {
+					this.applyPreset('default');
+				},
+				
+				applyPreset(id) {
+					this.selectedPreset = id;
+					const preset = this.presets.find(p => p.id === id);
+					if (preset) {
+						this.options = { ...preset.opts };
+					}
+				},
+
+				onFileChange(e) {
+					const file = e.target.files[0];
+					if (file) this.loadFile(file);
+					e.target.value = '';
+				},
+
+				onDrop(e) {
+					this.isDragging = false;
+					const file = e.dataTransfer.files[0];
+					if (file && file.type.startsWith('image/')) this.loadFile(file);
+				},
+
+				loadFile(file) {
+					this.originalFilename = file.name;
+					this.originalFileObject = file;
+					const reader = new FileReader();
+					reader.onload = (event) => {
+						this.originalImageSrc = event.target.result;
+						this.resultSvgSrc = '';
+						this.resultSvgStr = '';
+						this.previewTab = 'original';
+					};
+					reader.readAsDataURL(file);
+				},
+
+				convertToSvg() {
+					if (!this.originalImageSrc || this.isProcessing) return;
+					
+					if (typeof ImageTracer === 'undefined') {
+						alert('ImageTracer library is still loading or failed to load. Please try again in a moment.');
+						return;
+					}
+					
+					this.isProcessing = true;
+					this.resultSvgSrc = '';
+					
+					// Slight delay to allow UI to show processing state
+					setTimeout(() => {
+						try {
+							ImageTracer.imageToSVG(
+								this.originalImageSrc,
+								(svgstr) => {
+									this.resultSvgStr = svgstr;
+									const blob = new Blob([svgstr], { type: 'image/svg+xml;charset=utf-8' });
+									this.resultSvgSrc = URL.createObjectURL(blob);
+									this.previewTab = 'result';
+									this.isProcessing = false;
+								},
+								// We map our options to ImageTracer format
+								{
+									corspolicy: false,
+									numberofcolors: this.options.numberofcolors,
+									colorquantcycles: this.options.colorquantcycles,
+									mincolorratio: this.options.mincolorratio,
+									blurradius: this.options.blurradius,
+									viewbox: true
+								}
+							);
+						} catch (e) {
+							console.error('Error vectorizing image:', e);
+							alert('Failed to vectorize image. Try a smaller image.');
+							this.isProcessing = false;
+						}
+					}, 50);
+				}
+			}));
+		});
+	</script>
+</Layout>
