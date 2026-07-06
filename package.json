@@ -8,11 +8,14 @@
   "scripts": {
     "dev": "astro dev",
     "build": "astro build",
-    "preview": "astro preview",
-    "astro": "astro"
+    "preview": "npm run build && wrangler dev",
+    "astro": "astro",
+    "generate-types": "wrangler types",
+    "deploy": "npm run build && wrangler deploy"
   },
   "dependencies": {
     "@astrojs/alpinejs": "^1.0.0",
+    "@astrojs/cloudflare": "^14.1.1",
     "@astrojs/sitemap": "^3.7.3",
     "@tailwindcss/vite": "^4.3.2",
     "@types/alpinejs": "^3.13.11",
@@ -27,6 +30,7 @@
   },
   "devDependencies": {
     "@types/bcryptjs": "^2.4.6",
-    "@types/papaparse": "^5.5.2"
+    "@types/papaparse": "^5.5.2",
+    "wrangler": "^4.107.0"
   }
 }
