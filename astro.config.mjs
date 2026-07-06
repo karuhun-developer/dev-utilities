@@ -5,9 +5,12 @@ import alpinejs from "@astrojs/alpinejs";
 import AstroPWA from "@vite-pwa/astro";
 import sitemap from "@astrojs/sitemap";
 
+import cloudflare from "@astrojs/cloudflare";
+
 // https://astro.build/config
 export default defineConfig({
   site: "https://utilities.karuhundeveloper.com",
+
   integrations: [
     sitemap(),
     alpinejs(),
@@ -39,6 +42,7 @@ export default defineConfig({
       },
     }),
   ],
+
   vite: {
     plugins: [tailwindcss()],
     server: {
@@ -48,4 +52,6 @@ export default defineConfig({
       },
     },
   },
+
+  adapter: cloudflare(),
 });
