@@ -160,7 +160,18 @@ import Layout from '../layouts/Layout.astro';
 							progress: (key, current, total) => {
 								if (total > 0) {
 									const pct = Math.round((current / total) * 100);
-									this.progressText = `Downloading models: ${pct}%`;
+
+									// Check the process type from the 'key' parameter
+							        if (key.includes('fetch')) {
+							            // 'fetch' means it's loading the file (either from the internet or browser cache)
+							            this.progressText = `Loading AI model: ${pct}%`; 
+							        } else if (key.includes('compute')) {
+							            // 'compute' means the model is loaded and is currently processing the image
+							            this.progressText = `Processing image: ${pct}%`;
+							        } else {
+							            // Default text for other processes
+							            this.progressText = `Processing: ${pct}%`;
+							        }
 								}
 							}
 						});
