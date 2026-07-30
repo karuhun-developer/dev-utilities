@@ -1,0 +1,556 @@
+---
+import Layout from '../layouts/Layout.astro';
+---
+
+<Layout
+	title="Crop Image"
+	description="Crop images online by dragging a selection box. Lock aspect ratios (1:1, 4:3, 16:9), preview live, and export to PNG, JPG or WEBP. Free, runs entirely in your browser — nothing is uploaded."
+	keywords="crop image, image cropper, crop photo online, aspect ratio crop, cut image, crop png jpg webp, free image crop tool"
+>
+	<div class="max-w-5xl" x-data="cropImageApp()" x-init="init()">
+		<h1 class="text-2xl font-bold text-zinc-900 mb-2">Crop Image</h1>
+		<p class="text-zinc-600 mb-8">Drag a box over your image to crop it. Lock an aspect ratio if you need one. Everything happens in your browser — nothing is uploaded.</p>
+
+		<div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+
+			<!-- LEFT: Upload + Settings -->
+			<div class="space-y-5">
+
+				<!-- Drop zone -->
+				<div>
+					<label class="block text-sm font-medium text-zinc-700 mb-2">Upload Image</label>
+					<div
+						class="relative flex flex-col items-center justify-center border-2 border-dashed rounded-xl p-8 text-center transition-colors cursor-pointer"
+						:class="isDragging ? 'border-zinc-500 bg-zinc-100' : 'border-zinc-300 bg-zinc-50 hover:bg-zinc-100 hover:border-zinc-400'"
+						@dragover.prevent="isDragging = true"
+						@dragleave.prevent="isDragging = false"
+						@drop.prevent="onDrop($event)"
+						@click="$refs.fileInput.click()"
+					>
+						<svg xmlns="http://www.w3.org/2000/svg" class="w-10 h-10 text-zinc-300 mb-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+							<rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/>
+						</svg>
+						<p class="text-sm font-medium text-zinc-600">Drop an image here or <span class="text-zinc-900 underline underline-offset-2">browse</span></p>
+						<p class="text-xs text-zinc-400 mt-1">PNG, JPG, WEBP, GIF</p>
+						<input
+							type="file"
+							accept="image/*"
+							class="sr-only"
+							x-ref="fileInput"
+							@change="onFileChange($event)"
+						/>
+					</div>
+				</div>
+
+				<!-- Settings (shown after upload) -->
+				<div x-show="originalSrc" style="display:none;" class="space-y-4 bg-white border border-zinc-200 rounded-xl p-5">
+
+					<!-- Aspect ratio -->
+					<div>
+						<label class="block text-sm font-medium text-zinc-700 mb-2">Aspect Ratio</label>
+						<div class="grid grid-cols-3 gap-2">
+							<template x-for="preset in aspectPresets" :key="preset.label">
+								<button
+									@click="setAspect(preset.value)"
+									:class="aspect === preset.value ? 'bg-zinc-900 text-white border-zinc-900' : 'bg-white text-zinc-600 border-zinc-200 hover:border-zinc-400'"
+									class="px-2 py-2 rounded-lg border text-xs font-semibold transition-all"
+									x-text="preset.label"
+								></button>
+							</template>
+						</div>
+					</div>
+
+					<!-- Crop dimensions (numeric, in original pixels) -->
+					<div class="grid grid-cols-2 gap-3">
+						<div>
+							<label class="block text-xs font-medium text-zinc-600 mb-1">Width (px)</label>
+							<input
+								type="number"
+								min="1"
+								:max="naturalW"
+								:value="Math.round(crop.w * scaleX)"
+								@change="setCropWidth($event.target.value)"
+								class="w-full px-3 py-2 text-sm border border-zinc-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-zinc-300"
+							/>
+						</div>
+						<div>
+							<label class="block text-xs font-medium text-zinc-600 mb-1">Height (px)</label>
+							<input
+								type="number"
+								min="1"
+								:max="naturalH"
+								:value="Math.round(crop.h * scaleY)"
+								@change="setCropHeight($event.target.value)"
+								class="w-full px-3 py-2 text-sm border border-zinc-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-zinc-300"
+							/>
+						</div>
+					</div>
+
+					<!-- Format -->
+					<div>
+						<label class="block text-xs font-medium text-zinc-600 mb-2">Output Format</label>
+						<div class="flex gap-2">
+							<template x-for="fmt in ['png','jpg','webp']" :key="fmt">
+								<button
+									@click="outputFormat = fmt"
+									:class="outputFormat === fmt ? 'bg-zinc-900 text-white border-zinc-900' : 'bg-white text-zinc-500 border-zinc-200 hover:border-zinc-400'"
+									class="flex-1 py-1.5 rounded-lg border text-xs font-semibold uppercase tracking-wide transition-all"
+									x-text="fmt"
+								></button>
+							</template>
+						</div>
+					</div>
+
+					<div class="flex gap-2">
+						<!-- Crop button -->
+						<button
+							@click="doCrop()"
+							:disabled="isProcessing"
+							:class="isProcessing ? 'opacity-60 cursor-not-allowed' : 'hover:bg-zinc-800'"
+							class="flex-1 bg-zinc-900 text-white py-2.5 rounded-xl text-sm font-semibold transition-colors flex items-center justify-center gap-2"
+						>
+							<svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M6 2v14a2 2 0 0 0 2 2h14"/><path d="M18 22V8a2 2 0 0 0-2-2H2"/></svg>
+							<span x-text="isProcessing ? 'Processing…' : 'Crop Image'"></span>
+						</button>
+						<!-- Reset crop box -->
+						<button
+							@click="resetCropBox()"
+							class="px-4 bg-white text-zinc-600 border border-zinc-200 hover:border-zinc-400 rounded-xl text-sm font-semibold transition-colors"
+							title="Reset selection to full image"
+						>Reset</button>
+					</div>
+
+					<!-- Error -->
+					<div x-show="error" style="display:none;" class="text-xs text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2" x-text="error"></div>
+				</div>
+			</div>
+
+			<!-- RIGHT: Preview / Crop area -->
+			<div class="space-y-4">
+
+				<!-- Before / After tabs -->
+				<div x-show="originalSrc" style="display:none;" class="flex items-center gap-2">
+					<button
+						@click="previewTab = 'original'"
+						:class="previewTab === 'original' ? 'bg-zinc-900 text-white' : 'bg-white text-zinc-600 border border-zinc-200 hover:border-zinc-400'"
+						class="px-4 py-1.5 rounded-lg text-xs font-semibold transition-all"
+					>Select</button>
+					<button
+						@click="previewTab = 'result'"
+						:disabled="!resultSrc"
+						:class="[previewTab === 'result' ? 'bg-zinc-900 text-white' : 'bg-white text-zinc-600 border border-zinc-200 hover:border-zinc-400', !resultSrc ? 'opacity-40 cursor-not-allowed' : '']"
+						class="px-4 py-1.5 rounded-lg text-xs font-semibold transition-all"
+					>Result</button>
+				</div>
+
+				<!-- Preview area -->
+				<div
+					class="rounded-xl border border-zinc-200 overflow-hidden flex items-center justify-center min-h-72 relative select-none"
+					style="background-image: linear-gradient(45deg, #e4e4e7 25%, transparent 25%), linear-gradient(-45deg, #e4e4e7 25%, transparent 25%), linear-gradient(45deg, transparent 75%, #e4e4e7 75%), linear-gradient(-45deg, transparent 75%, #e4e4e7 75%); background-size: 16px 16px; background-position: 0 0, 0 8px, 8px -8px, -8px 0px; background-color: #f4f4f5;"
+				>
+					<!-- Empty state -->
+					<div x-show="!originalSrc" class="text-center p-10">
+						<svg xmlns="http://www.w3.org/2000/svg" class="mx-auto mb-3 w-12 h-12 text-zinc-300" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+							<rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/>
+						</svg>
+						<p class="text-sm text-zinc-400">Upload an image to start cropping</p>
+					</div>
+
+					<!-- Crop stage -->
+					<div
+						x-show="originalSrc && previewTab === 'original'"
+						style="display:none;"
+						x-ref="stage"
+						class="relative inline-block max-w-full"
+					>
+						<img
+							x-ref="image"
+							:src="originalSrc"
+							alt="Crop source"
+							draggable="false"
+							@load="onImgLoad()"
+							class="block max-w-full max-h-[26rem] w-auto h-auto select-none"
+						/>
+
+						<!-- Overlay: capture new-selection drags on empty area -->
+						<div
+							class="absolute inset-0 cursor-crosshair"
+							@pointerdown="startNewSelection($event)"
+							@touchstart.prevent
+						></div>
+
+						<!-- Crop box -->
+						<div
+							x-show="crop.w > 0 && crop.h > 0"
+							class="absolute cursor-move"
+							:style="`left:${crop.x}px; top:${crop.y}px; width:${crop.w}px; height:${crop.h}px; box-shadow:0 0 0 9999px rgba(0,0,0,0.45); outline:1px solid rgba(255,255,255,0.9);`"
+							@pointerdown.stop="startMove($event)"
+							@touchstart.prevent
+						>
+							<!-- rule-of-thirds guides -->
+							<div class="absolute inset-0 pointer-events-none" style="background-image: linear-gradient(to right, transparent 33.33%, rgba(255,255,255,.4) 33.33%, rgba(255,255,255,.4) 33.5%, transparent 33.5%, transparent 66.66%, rgba(255,255,255,.4) 66.66%, rgba(255,255,255,.4) 66.83%, transparent 66.83%), linear-gradient(to bottom, transparent 33.33%, rgba(255,255,255,.4) 33.33%, rgba(255,255,255,.4) 33.5%, transparent 33.5%, transparent 66.66%, rgba(255,255,255,.4) 66.66%, rgba(255,255,255,.4) 66.83%, transparent 66.83%);"></div>
+
+							<!-- resize handles -->
+							<template x-for="h in handles" :key="h.id">
+								<div
+									@pointerdown.stop="startResize($event, h.id)"
+									@touchstart.prevent
+									class="absolute w-3 h-3 bg-white border border-zinc-800 rounded-sm"
+									:style="h.style"
+								></div>
+							</template>
+						</div>
+					</div>
+
+					<!-- Result -->
+					<img
+						x-show="resultSrc && previewTab === 'result'"
+						style="display:none;"
+						:src="resultSrc"
+						alt="Cropped result"
+						class="max-w-full max-h-96 object-contain p-3"
+					/>
+
+					<div x-show="!resultSrc && previewTab === 'result'" class="text-center p-10">
+						<p class="text-sm text-zinc-400">Click "Crop Image" to see the result</p>
+					</div>
+				</div>
+
+				<!-- Selection info -->
+				<div x-show="originalSrc && previewTab === 'original'" style="display:none;" class="text-xs text-zinc-500 text-center">
+					Selection: <span class="font-mono text-zinc-700" x-text="Math.round(crop.w * scaleX) + ' × ' + Math.round(crop.h * scaleY) + ' px'"></span>
+				</div>
+
+				<!-- Stats + download -->
+				<div x-show="resultSrc" style="display:none;" class="grid grid-cols-2 gap-3">
+					<div class="bg-zinc-50 border border-zinc-200 rounded-xl p-4">
+						<p class="text-xs font-semibold text-zinc-400 uppercase tracking-wider mb-1">Original</p>
+						<p class="text-lg font-bold text-zinc-900" x-text="stats.originalW + ' × ' + stats.originalH"></p>
+						<p class="text-xs text-zinc-400">pixels</p>
+					</div>
+					<div class="bg-zinc-50 border border-zinc-200 rounded-xl p-4">
+						<p class="text-xs font-semibold text-zinc-400 uppercase tracking-wider mb-1">Cropped</p>
+						<p class="text-lg font-bold text-zinc-900" x-text="stats.cropW + ' × ' + stats.cropH"></p>
+						<p class="text-xs text-zinc-400">pixels</p>
+					</div>
+					<a
+						:href="resultSrc"
+						:download="downloadName"
+						class="col-span-2 flex items-center justify-center gap-2 bg-zinc-900 hover:bg-zinc-700 text-white text-sm font-semibold px-4 py-2.5 rounded-xl transition-colors"
+					>
+						<svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+						Download
+					</a>
+				</div>
+			</div>
+		</div>
+
+		<!-- Hidden canvas -->
+		<canvas id="cropCanvas" style="display:none;"></canvas>
+	</div>
+
+	<script is:inline>
+		document.addEventListener('alpine:init', () => {
+			Alpine.data('cropImageApp', () => ({
+				originalSrc: '',
+				originalFilename: 'image',
+				resultSrc: '',
+				isDragging: false,
+				isProcessing: false,
+				outputFormat: 'png',
+				previewTab: 'original',
+				error: '',
+
+				naturalW: 0,
+				naturalH: 0,
+				dispW: 0,
+				dispH: 0,
+				aspect: 'free', // 'free' or numeric ratio (w/h)
+				crop: { x: 0, y: 0, w: 0, h: 0 }, // display pixels, relative to image top-left
+				drag: null,
+				stats: { originalW: 0, originalH: 0, cropW: 0, cropH: 0 },
+
+				MIN: 12,
+
+				aspectPresets: [
+					{ label: 'Free', value: 'free' },
+					{ label: '1:1', value: 1 },
+					{ label: '4:3', value: 4 / 3 },
+					{ label: '3:4', value: 3 / 4 },
+					{ label: '16:9', value: 16 / 9 },
+					{ label: '3:2', value: 3 / 2 },
+				],
+
+				get scaleX() { return this.dispW ? this.naturalW / this.dispW : 1; },
+				get scaleY() { return this.dispH ? this.naturalH / this.dispH : 1; },
+
+				get downloadName() {
+					const base = this.originalFilename.replace(/\.[^/.]+$/, '');
+					return `${base}-cropped.${this.outputFormat}`;
+				},
+
+				get handles() {
+					const c = this.crop;
+					return [
+						{ id: 'nw', style: 'left:-6px; top:-6px; cursor:nwse-resize;' },
+						{ id: 'n',  style: `left:${c.w / 2 - 6}px; top:-6px; cursor:ns-resize;` },
+						{ id: 'ne', style: 'right:-6px; top:-6px; cursor:nesw-resize;' },
+						{ id: 'e',  style: `right:-6px; top:${c.h / 2 - 6}px; cursor:ew-resize;` },
+						{ id: 'se', style: 'right:-6px; bottom:-6px; cursor:nwse-resize;' },
+						{ id: 's',  style: `left:${c.w / 2 - 6}px; bottom:-6px; cursor:ns-resize;` },
+						{ id: 'sw', style: 'left:-6px; bottom:-6px; cursor:nesw-resize;' },
+						{ id: 'w',  style: `left:-6px; top:${c.h / 2 - 6}px; cursor:ew-resize;` },
+					];
+				},
+
+				init() {
+					this._move = (e) => this.onMove(e);
+					this._up = () => this.endDrag();
+					this._resize = () => this.onWindowResize();
+					window.addEventListener('resize', this._resize);
+				},
+
+				onFileChange(e) {
+					const file = e.target.files[0];
+					if (file) this.loadFile(file);
+				},
+
+				onDrop(e) {
+					this.isDragging = false;
+					const file = e.dataTransfer.files[0];
+					if (file && file.type.startsWith('image/')) this.loadFile(file);
+				},
+
+				loadFile(file) {
+					this.originalFilename = file.name;
+					this.outputFormat = file.type === 'image/jpeg' ? 'jpg' : file.type === 'image/webp' ? 'webp' : 'png';
+					this.resultSrc = '';
+					this.previewTab = 'original';
+					this.error = '';
+					this.aspect = 'free';
+					const reader = new FileReader();
+					reader.onload = (ev) => { this.originalSrc = ev.target.result; };
+					reader.readAsDataURL(file);
+				},
+
+				onImgLoad() {
+					const img = this.$refs.image;
+					if (!img) return;
+					this.naturalW = img.naturalWidth;
+					this.naturalH = img.naturalHeight;
+					this.$nextTick(() => {
+						this.dispW = img.clientWidth;
+						this.dispH = img.clientHeight;
+						this.resetCropBox();
+					});
+				},
+
+				onWindowResize() {
+					if (!this.originalSrc || this.previewTab !== 'original') return;
+					const img = this.$refs.image;
+					if (!img || !this.dispW) return;
+					const newW = img.clientWidth;
+					const newH = img.clientHeight;
+					if (!newW || !newH) return;
+					const rx = newW / this.dispW;
+					const ry = newH / this.dispH;
+					this.crop = {
+						x: this.crop.x * rx,
+						y: this.crop.y * ry,
+						w: this.crop.w * rx,
+						h: this.crop.h * ry,
+					};
+					this.dispW = newW;
+					this.dispH = newH;
+				},
+
+				resetCropBox() {
+					// Center an 80% box, respecting current aspect ratio
+					let w = this.dispW * 0.8;
+					let h = this.dispH * 0.8;
+					if (this.aspect !== 'free') {
+						if (w / h > this.aspect) w = h * this.aspect;
+						else h = w / this.aspect;
+					}
+					this.crop = {
+						x: (this.dispW - w) / 2,
+						y: (this.dispH - h) / 2,
+						w, h,
+					};
+				},
+
+				setAspect(value) {
+					this.aspect = value;
+					if (value === 'free') return;
+					// Re-fit current box to the new ratio, keeping the top-left anchor
+					let w = this.crop.w;
+					let h = w / value;
+					if (this.crop.y + h > this.dispH) { h = this.dispH - this.crop.y; w = h * value; }
+					if (this.crop.x + w > this.dispW) { w = this.dispW - this.crop.x; h = w / value; }
+					this.crop = { ...this.crop, w, h };
+				},
+
+				clamp(v, min, max) { return Math.max(min, Math.min(max, v)); },
+
+				pointer(e) {
+					const rect = this.$refs.image.getBoundingClientRect();
+					const pt = e.touches ? e.touches[0] : e;
+					return {
+						x: this.clamp(pt.clientX - rect.left, 0, this.dispW),
+						y: this.clamp(pt.clientY - rect.top, 0, this.dispH),
+					};
+				},
+
+				startNewSelection(e) {
+					const p = this.pointer(e);
+					this.drag = { mode: 'new', anchor: p };
+					this.crop = { x: p.x, y: p.y, w: 0, h: 0 };
+					this.attach();
+				},
+
+				startMove(e) {
+					const p = this.pointer(e);
+					this.drag = { mode: 'move', start: p, orig: { ...this.crop } };
+					this.attach();
+				},
+
+				startResize(e, handle) {
+					const p = this.pointer(e);
+					this.drag = { mode: 'resize', handle, start: p, orig: { ...this.crop } };
+					this.attach();
+				},
+
+				attach() {
+					window.addEventListener('pointermove', this._move);
+					window.addEventListener('pointerup', this._up);
+				},
+
+				onMove(e) {
+					if (!this.drag) return;
+					const p = this.pointer(e);
+					if (this.drag.mode === 'new') this.updateNew(p);
+					else if (this.drag.mode === 'move') this.updateMove(p);
+					else this.updateResize(p);
+				},
+
+				updateNew(p) {
+					const a = this.drag.anchor;
+					let L = Math.min(a.x, p.x), R = Math.max(a.x, p.x);
+					let T = Math.min(a.y, p.y), B = Math.max(a.y, p.y);
+					if (this.aspect !== 'free') {
+						let w = R - L;
+						let h = w / this.aspect;
+						// grow vertically in the drag direction
+						if (p.y < a.y) { T = a.y - h; B = a.y; } else { T = a.y; B = a.y + h; }
+						if (T < 0) { T = 0; h = B - T; w = h * this.aspect; if (p.x < a.x) L = R - w; else R = L + w; }
+						if (B > this.dispH) { B = this.dispH; h = B - T; w = h * this.aspect; if (p.x < a.x) L = R - w; else R = L + w; }
+					}
+					this.crop = { x: L, y: T, w: R - L, h: B - T };
+				},
+
+				updateMove(p) {
+					const o = this.drag.orig;
+					const dx = p.x - this.drag.start.x;
+					const dy = p.y - this.drag.start.y;
+					this.crop = {
+						x: this.clamp(o.x + dx, 0, this.dispW - o.w),
+						y: this.clamp(o.y + dy, 0, this.dispH - o.h),
+						w: o.w, h: o.h,
+					};
+				},
+
+				updateResize(p) {
+					const o = this.drag.orig;
+					const hnd = this.drag.handle;
+					let L = o.x, T = o.y, R = o.x + o.w, B = o.y + o.h;
+
+					if (hnd.includes('w')) L = this.clamp(p.x, 0, R - this.MIN);
+					if (hnd.includes('e')) R = this.clamp(p.x, L + this.MIN, this.dispW);
+					if (hnd.includes('n')) T = this.clamp(p.y, 0, B - this.MIN);
+					if (hnd.includes('s')) B = this.clamp(p.y, T + this.MIN, this.dispH);
+
+					if (this.aspect !== 'free') {
+						const isCorner = hnd.length === 2;
+						const horiz = hnd.includes('e') || hnd.includes('w');
+						let w = R - L, h = B - T;
+						if (isCorner || horiz) { h = w / this.aspect; } else { w = h * this.aspect; }
+						// anchor opposite edge
+						if (hnd.includes('w')) L = R - w; else R = L + w;
+						if (hnd.includes('n')) T = B - h; else B = T + h;
+						// keep inside bounds
+						if (L < 0) { L = 0; }
+						if (T < 0) { T = 0; }
+						if (R > this.dispW) { R = this.dispW; }
+						if (B > this.dispH) { B = this.dispH; }
+					}
+					this.crop = { x: L, y: T, w: Math.max(this.MIN, R - L), h: Math.max(this.MIN, B - T) };
+				},
+
+				endDrag() {
+					this.drag = null;
+					window.removeEventListener('pointermove', this._move);
+					window.removeEventListener('pointerup', this._up);
+				},
+
+				setCropWidth(val) {
+					let w = this.clamp(parseFloat(val) / this.scaleX, this.MIN, this.dispW - this.crop.x);
+					let h = this.aspect !== 'free' ? w / this.aspect : this.crop.h;
+					if (this.crop.y + h > this.dispH) { h = this.dispH - this.crop.y; if (this.aspect !== 'free') w = h * this.aspect; }
+					this.crop = { ...this.crop, w, h };
+				},
+
+				setCropHeight(val) {
+					let h = this.clamp(parseFloat(val) / this.scaleY, this.MIN, this.dispH - this.crop.y);
+					let w = this.aspect !== 'free' ? h * this.aspect : this.crop.w;
+					if (this.crop.x + w > this.dispW) { w = this.dispW - this.crop.x; if (this.aspect !== 'free') h = w / this.aspect; }
+					this.crop = { ...this.crop, w, h };
+				},
+
+				doCrop() {
+					if (!this.originalSrc || this.isProcessing) return;
+					if (this.crop.w < 1 || this.crop.h < 1) { this.error = 'Draw a selection box first.'; return; }
+					this.isProcessing = true;
+					this.error = '';
+
+					setTimeout(() => {
+						const img = new Image();
+						img.onload = () => {
+							try {
+								const sx = this.crop.x * this.scaleX;
+								const sy = this.crop.y * this.scaleY;
+								const sw = this.crop.w * this.scaleX;
+								const sh = this.crop.h * this.scaleY;
+								const outW = Math.max(1, Math.round(sw));
+								const outH = Math.max(1, Math.round(sh));
+
+								const canvas = document.getElementById('cropCanvas');
+								canvas.width = outW;
+								canvas.height = outH;
+								const ctx = canvas.getContext('2d');
+
+								if (this.outputFormat === 'jpg') {
+									ctx.fillStyle = '#ffffff';
+									ctx.fillRect(0, 0, outW, outH);
+								}
+								ctx.drawImage(img, sx, sy, sw, sh, 0, 0, outW, outH);
+
+								const mimeMap = { png: 'image/png', jpg: 'image/jpeg', webp: 'image/webp' };
+								const mime = mimeMap[this.outputFormat] || 'image/png';
+								this.resultSrc = canvas.toDataURL(mime, 0.92);
+
+								this.stats = { originalW: this.naturalW, originalH: this.naturalH, cropW: outW, cropH: outH };
+								this.previewTab = 'result';
+							} catch (err) {
+								this.error = 'Failed to process image: ' + err.message;
+							} finally {
+								this.isProcessing = false;
+							}
+						};
+						img.onerror = () => { this.error = 'Failed to load image.'; this.isProcessing = false; };
+						img.src = this.originalSrc;
+					}, 50);
+				},
+			}));
+		});
+	</script>
+</Layout>
