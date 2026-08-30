@@ -1,0 +1,1078 @@
+---
+import Layout from '../layouts/Layout.astro';
+---
+
+<Layout
+	title="Video to Frames Extractor"
+	description="Extract high-quality image frames and snapshots from video files. Convert video to WEBP, PNG, JPG, or BMP sequence — free, fast, and 100% locally in your browser."
+	keywords="video to frames, extract video frames, video to image sequence, video snapshot, video screenshot, convert mp4 to webp, convert video to png, client side video processing"
+>
+	<div class="max-w-6xl" x-data="videoToFramesApp()" x-init="init()">
+		<div class="flex flex-wrap items-center justify-between gap-4 mb-2">
+			<h1 class="text-2xl font-bold text-zinc-900">Video to Frames Extractor</h1>
+			<span class="text-xs font-semibold px-2.5 py-1 bg-zinc-100 text-zinc-700 rounded-full border border-zinc-200 flex items-center gap-1.5">
+				<span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+				100% Client-Side & Private
+			</span>
+		</div>
+		<p class="text-zinc-600 mb-8">
+			Extract high quality image sequences, snapshots, or specific timestamps from any video file. Export to WEBP, PNG, JPG, or BMP and download individually or as a ZIP archive.
+		</p>
+
+		<!-- Upload Zone (shown when no video loaded) -->
+		<div
+			x-show="!videoSrc"
+			class="relative flex flex-col items-center justify-center border-2 border-dashed rounded-2xl px-8 py-12 text-center transition-all cursor-pointer mb-6"
+			:class="isDragging ? 'border-zinc-600 bg-zinc-100' : 'border-zinc-300 bg-zinc-50 hover:bg-zinc-100 hover:border-zinc-400'"
+			@dragover.prevent="isDragging = true"
+			@dragleave.prevent="isDragging = false"
+			@drop.prevent="onDrop($event)"
+			@click="$refs.videoInput.click()"
+		>
+			<div class="w-14 h-14 rounded-2xl bg-zinc-200/60 flex items-center justify-center text-zinc-600 mb-4 shadow-sm">
+				<svg xmlns="http://www.w3.org/2000/svg" class="w-7 h-7" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+					<polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2" ry="2"/>
+				</svg>
+			</div>
+			<p class="text-base font-semibold text-zinc-800">Drop your video here or <span class="text-zinc-900 underline underline-offset-2">browse file</span></p>
+			<p class="text-xs text-zinc-400 mt-1">MP4 · WEBM · MOV · MKV · AVI · OGG · Fast local processing</p>
+			<input
+				type="file"
+				accept="video/*"
+				class="sr-only"
+				x-ref="videoInput"
+				@change="onFileChange($event)"
+			/>
+		</div>
+
+		<!-- Main Workspace (shown when video is loaded) -->
+		<div x-show="videoSrc" style="display: none;" class="space-y-8">
+			
+			<!-- Video Info Bar -->
+			<div class="bg-white border border-zinc-200 rounded-2xl p-4 flex flex-wrap items-center justify-between gap-4 shadow-sm">
+				<div class="flex items-center gap-3 min-w-0">
+					<div class="w-10 h-10 rounded-xl bg-zinc-100 border border-zinc-200 flex items-center justify-center text-zinc-700 flex-shrink-0">
+						<svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2" ry="2"/></svg>
+					</div>
+					<div class="min-w-0">
+						<p class="text-sm font-semibold text-zinc-900 truncate" x-text="videoFile?.name || 'video'"></p>
+						<div class="flex items-center gap-2 text-xs text-zinc-500 mt-0.5">
+							<span x-text="formatDuration(duration)"></span>
+							<span>·</span>
+							<span x-text="videoWidth + ' × ' + videoHeight + ' px'"></span>
+							<span>·</span>
+							<span x-text="formatSize(videoFile?.size || 0)"></span>
+						</div>
+					</div>
+				</div>
+
+				<div class="flex items-center gap-2">
+					<button
+						@click="$refs.videoInput.click()"
+						class="text-xs font-medium px-3 py-1.5 border border-zinc-200 rounded-lg hover:bg-zinc-50 text-zinc-700 transition-colors"
+					>
+						Change Video
+					</button>
+					<button
+						@click="clearVideo()"
+						class="text-xs font-medium px-3 py-1.5 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+					>
+						Remove
+					</button>
+				</div>
+			</div>
+
+			<!-- Grid: Video Player + Controls -->
+			<div class="grid grid-cols-1 lg:grid-cols-12 gap-8">
+				
+				<!-- Left Column: Video Preview & Manual Snapshot -->
+				<div class="lg:col-span-5 space-y-4">
+					<div class="bg-zinc-900 rounded-2xl overflow-hidden border border-zinc-800 shadow-md relative group">
+						<video
+							x-ref="mainVideo"
+							:src="videoSrc"
+							class="w-full max-h-[380px] object-contain bg-black"
+							controls
+							playsinline
+							@timeupdate="onMainVideoTimeUpdate()"
+						></video>
+					</div>
+
+					<!-- Single Snapshot Card -->
+					<div class="bg-zinc-50 border border-zinc-200 rounded-2xl p-4 space-y-3">
+						<div class="flex items-center justify-between">
+							<div>
+								<h3 class="text-xs font-bold text-zinc-800 uppercase tracking-wider">Instant Snapshot</h3>
+								<p class="text-[11px] text-zinc-500">Capture exact frame at current video playback position</p>
+							</div>
+							<span class="text-xs font-mono font-bold text-zinc-700 bg-white border border-zinc-200 px-2 py-0.5 rounded" x-text="formatDuration(currentVideoTime, true)"></span>
+						</div>
+						<button
+							@click="captureCurrentFrame()"
+							:disabled="isExtracting"
+							class="w-full bg-zinc-900 hover:bg-zinc-800 text-white text-xs font-semibold py-2.5 px-4 rounded-xl transition-all flex items-center justify-center gap-2 shadow-sm disabled:opacity-50"
+						>
+							<svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 text-emerald-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+								<path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/>
+							</svg>
+							Capture Current Frame
+						</button>
+					</div>
+				</div>
+
+				<!-- Right Column: Batch Extraction Settings -->
+				<div class="lg:col-span-7 space-y-5">
+					<div class="bg-white border border-zinc-200 rounded-2xl p-6 space-y-6 shadow-sm">
+						
+						<!-- Section 1: Extraction Mode -->
+						<div>
+							<label class="block text-xs font-bold text-zinc-600 uppercase tracking-wider mb-3">1. Extraction Mode</label>
+							<div class="grid grid-cols-3 gap-2">
+								<button
+									@click="mode = 'interval'"
+									:class="mode === 'interval' ? 'bg-zinc-900 text-white border-zinc-900 shadow-sm' : 'bg-zinc-50 text-zinc-700 border-zinc-200 hover:bg-zinc-100'"
+									class="p-2.5 border rounded-xl text-left transition-all"
+								>
+									<p class="text-xs font-bold">Time Interval</p>
+									<p class="text-[10px] opacity-70 mt-0.5">Every X seconds</p>
+								</button>
+								<button
+									@click="mode = 'total'"
+									:class="mode === 'total' ? 'bg-zinc-900 text-white border-zinc-900 shadow-sm' : 'bg-zinc-50 text-zinc-700 border-zinc-200 hover:bg-zinc-100'"
+									class="p-2.5 border rounded-xl text-left transition-all"
+								>
+									<p class="text-xs font-bold">Total Frames</p>
+									<p class="text-[10px] opacity-70 mt-0.5">Evenly distributed</p>
+								</button>
+								<button
+									@click="mode = 'fps'"
+									:class="mode === 'fps' ? 'bg-zinc-900 text-white border-zinc-900 shadow-sm' : 'bg-zinc-50 text-zinc-700 border-zinc-200 hover:bg-zinc-100'"
+									class="p-2.5 border rounded-xl text-left transition-all"
+								>
+									<p class="text-xs font-bold">Frame Rate (FPS)</p>
+									<p class="text-[10px] opacity-70 mt-0.5">Frames per second</p>
+								</button>
+							</div>
+
+							<!-- Mode specific inputs -->
+							<div class="mt-4 p-3.5 bg-zinc-50 border border-zinc-200 rounded-xl">
+								
+								<!-- Interval Mode -->
+								<div x-show="mode === 'interval'" class="space-y-3">
+									<div class="flex items-center justify-between">
+										<label class="text-xs font-medium text-zinc-700">Interval between frames:</label>
+										<span class="text-xs font-bold text-zinc-900 font-mono" x-text="intervalSeconds + ' s'"></span>
+									</div>
+									<div class="flex items-center gap-2">
+										<input
+											type="range"
+											x-model.number="intervalSeconds"
+											min="0.1"
+											:max="Math.max(duration, 5)"
+											step="0.1"
+											class="flex-1 accent-zinc-900"
+										/>
+									</div>
+									<div class="flex flex-wrap gap-1.5">
+										<template x-for="preset in [0.5, 1, 2, 5, 10]" :key="preset">
+											<button
+												@click="intervalSeconds = preset"
+												:class="intervalSeconds === preset ? 'bg-zinc-900 text-white' : 'bg-white text-zinc-600 border border-zinc-200 hover:bg-zinc-100'"
+												class="px-2.5 py-1 rounded-lg text-xs font-semibold transition-colors"
+												x-text="preset + 's'"
+											></button>
+										</template>
+									</div>
+								</div>
+
+								<!-- Total Frames Mode -->
+								<div x-show="mode === 'total'" class="space-y-3" style="display:none;">
+									<div class="flex items-center justify-between">
+										<label class="text-xs font-medium text-zinc-700">Number of frames to extract:</label>
+										<span class="text-xs font-bold text-zinc-900 font-mono" x-text="totalFramesCount + ' frames'"></span>
+									</div>
+									<input
+										type="range"
+										x-model.number="totalFramesCount"
+										min="2"
+										max="100"
+										step="1"
+										class="w-full accent-zinc-900"
+									/>
+									<div class="flex flex-wrap gap-1.5">
+										<template x-for="preset in [5, 10, 20, 30, 50]" :key="preset">
+											<button
+												@click="totalFramesCount = preset"
+												:class="totalFramesCount === preset ? 'bg-zinc-900 text-white' : 'bg-white text-zinc-600 border border-zinc-200 hover:bg-zinc-100'"
+												class="px-2.5 py-1 rounded-lg text-xs font-semibold transition-colors"
+												x-text="preset + ' frames'"
+											></button>
+										</template>
+									</div>
+								</div>
+
+								<!-- FPS Mode -->
+								<div x-show="mode === 'fps'" class="space-y-3" style="display:none;">
+									<div class="flex items-center justify-between">
+										<label class="text-xs font-medium text-zinc-700">Frame extraction rate:</label>
+										<span class="text-xs font-bold text-zinc-900 font-mono" x-text="fpsRate + ' FPS'"></span>
+									</div>
+									<div class="flex flex-wrap gap-2">
+										<template x-for="fps in [0.5, 1, 2, 5, 10, 24]" :key="fps">
+											<button
+												@click="fpsRate = fps"
+												:class="fpsRate === fps ? 'bg-zinc-900 text-white' : 'bg-white text-zinc-600 border border-zinc-200 hover:bg-zinc-100'"
+												class="flex-1 py-1.5 rounded-lg text-xs font-semibold transition-colors text-center"
+												x-text="fps + ' fps'"
+											></button>
+										</template>
+									</div>
+								</div>
+
+							</div>
+						</div>
+
+						<!-- Section 2: Time Range (Optional) -->
+						<div class="pt-2 border-t border-zinc-100">
+							<div class="flex items-center justify-between mb-2">
+								<label class="text-xs font-bold text-zinc-600 uppercase tracking-wider">2. Video Range</label>
+								<label class="flex items-center gap-1.5 text-xs text-zinc-600 cursor-pointer">
+									<input type="checkbox" x-model="useFullVideo" class="rounded text-zinc-900 focus:ring-zinc-900 border-zinc-300">
+									<span>Entire Video (0:00 - <span x-text="formatDuration(duration)"></span>)</span>
+								</label>
+							</div>
+
+							<div x-show="!useFullVideo" class="grid grid-cols-2 gap-3 p-3 bg-zinc-50 border border-zinc-200 rounded-xl">
+								<div>
+									<label class="block text-[11px] font-semibold text-zinc-500 mb-1">Start Time (seconds)</label>
+									<input
+										type="number"
+										x-model.number="startTime"
+										min="0"
+										:max="endTime"
+										step="0.1"
+										class="w-full px-2.5 py-1.5 text-xs font-mono border border-zinc-300 rounded-lg bg-white focus:outline-none focus:ring-1 focus:ring-zinc-500"
+									/>
+								</div>
+								<div>
+									<label class="block text-[11px] font-semibold text-zinc-500 mb-1">End Time (seconds)</label>
+									<input
+										type="number"
+										x-model.number="endTime"
+										:min="startTime"
+										:max="duration"
+										step="0.1"
+										class="w-full px-2.5 py-1.5 text-xs font-mono border border-zinc-300 rounded-lg bg-white focus:outline-none focus:ring-1 focus:ring-zinc-500"
+									/>
+								</div>
+							</div>
+						</div>
+
+						<!-- Section 3: Output Format & Quality -->
+						<div class="pt-2 border-t border-zinc-100 space-y-4">
+							<label class="block text-xs font-bold text-zinc-600 uppercase tracking-wider">3. Output Format & Settings</label>
+							
+							<div class="grid grid-cols-4 gap-2">
+								<template x-for="fmt in formats" :key="fmt.value">
+									<button
+										@click="targetFormat = fmt.value"
+										:class="targetFormat === fmt.value
+											? 'bg-zinc-900 text-white border-zinc-900 shadow-sm'
+											: 'bg-zinc-50 text-zinc-700 border-zinc-200 hover:bg-zinc-100'"
+										class="flex flex-col items-center justify-center p-2.5 border rounded-xl text-xs font-bold tracking-wide transition-all"
+									>
+										<span x-text="fmt.label"></span>
+										<span class="text-[9px] font-normal opacity-70" x-text="fmt.note"></span>
+									</button>
+								</template>
+							</div>
+
+							<div class="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-1">
+								<!-- Quality slider for lossy formats -->
+								<div x-show="isLossy" class="bg-zinc-50 p-3 rounded-xl border border-zinc-200">
+									<div class="flex justify-between mb-1.5">
+										<label class="text-xs font-semibold text-zinc-600">Image Quality</label>
+										<span class="text-xs font-mono font-bold text-zinc-900" x-text="Math.round(quality * 100) + '%'"></span>
+									</div>
+									<input type="range" x-model.number="quality" min="0.1" max="1.0" step="0.05" class="w-full accent-zinc-900" />
+									<div class="flex justify-between text-[10px] text-zinc-400 mt-1">
+										<span>Smaller size</span><span>High quality</span>
+									</div>
+								</div>
+
+								<!-- Scaling -->
+								<div class="bg-zinc-50 p-3 rounded-xl border border-zinc-200">
+									<label class="block text-xs font-semibold text-zinc-600 mb-1.5">Resolution Scale</label>
+									<select x-model="scalePreset" class="w-full text-xs font-medium border border-zinc-300 rounded-lg px-2.5 py-1.5 bg-white focus:outline-none focus:ring-1 focus:ring-zinc-500">
+										<option value="1">Original (100%) - <span x-text="videoWidth + '×' + videoHeight"></span></option>
+										<option value="0.75">75% Resolution</option>
+										<option value="0.5">50% Resolution (Faster / Smaller)</option>
+										<option value="0.25">25% Thumbnail Size</option>
+									</select>
+									<p class="text-[10px] text-zinc-400 mt-1">
+										Output: <span class="font-mono text-zinc-600 font-semibold" x-text="Math.round(videoWidth * parseFloat(scalePreset)) + ' × ' + Math.round(videoHeight * parseFloat(scalePreset)) + ' px'"></span>
+									</p>
+								</div>
+							</div>
+						</div>
+
+						<!-- Action Button & Estimate -->
+						<div class="pt-4 border-t border-zinc-100">
+							<div class="flex flex-wrap items-center justify-between gap-3 mb-3">
+								<span class="text-xs font-medium text-zinc-500">
+									Estimated output: <strong class="text-zinc-800 font-bold" x-text="estimatedFramesCount + ' frames'"></strong>
+								</span>
+								<span x-show="estimatedFramesCount > 150" class="text-xs text-amber-600 font-medium">
+									⚠️ Large number of frames may take longer.
+								</span>
+							</div>
+
+							<!-- Normal state button -->
+							<button
+								x-show="!isExtracting"
+								@click="startExtraction()"
+								:disabled="isExtracting || duration <= 0"
+								class="w-full bg-zinc-900 hover:bg-zinc-800 text-white font-semibold py-3 px-6 rounded-xl text-sm transition-all flex items-center justify-center gap-2 shadow-md hover:shadow-lg disabled:opacity-50"
+							>
+								<svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 text-emerald-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+									<rect x="2" y="2" width="20" height="20" rx="2.18" ry="2.18"/><line x1="7" y1="2" x2="7" y2="22"/><line x1="17" y1="2" x2="17" y2="22"/><line x1="2" y1="12" x2="22" y2="12"/><line x1="2" y1="7" x2="7" y2="7"/><line x1="2" y1="17" x2="7" y2="17"/><line x1="17" y1="17" x2="22" y2="17"/><line x1="17" y1="7" x2="22" y2="7"/>
+								</svg>
+								<span>Start Frame Extraction</span>
+							</button>
+
+							<!-- Progress state -->
+							<div x-show="isExtracting" style="display:none;" class="space-y-3 p-4 bg-zinc-50 border border-zinc-200 rounded-xl">
+								<div class="flex items-center justify-between text-xs">
+									<div class="flex items-center gap-2">
+										<svg class="animate-spin w-4 h-4 text-zinc-900" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+										<span class="font-semibold text-zinc-800" x-text="progressText"></span>
+									</div>
+									<span class="font-mono font-bold text-zinc-700" x-text="Math.round(progressPercent) + '%'"></span>
+								</div>
+								<!-- Progress Bar -->
+								<div class="w-full bg-zinc-200 rounded-full h-2 overflow-hidden">
+									<div class="bg-zinc-900 h-2 rounded-full transition-all duration-150" :style="`width: ${progressPercent}%`"></div>
+								</div>
+								<button
+									@click="cancelExtraction()"
+									class="text-xs font-semibold text-red-600 hover:text-red-700 block text-center w-full py-1 hover:underline"
+								>
+									Cancel Extraction
+								</button>
+							</div>
+						</div>
+
+					</div>
+				</div>
+
+			</div>
+
+			<!-- Extracted Frames Gallery Section -->
+			<div x-show="frames.length > 0" style="display: none;" class="space-y-6 pt-4 border-t border-zinc-200">
+				
+				<!-- Gallery Header & Actions -->
+				<div class="bg-white border border-zinc-200 rounded-2xl p-5 flex flex-wrap items-center justify-between gap-4 shadow-sm">
+					<div>
+						<h2 class="text-base font-bold text-zinc-900 flex items-center gap-2">
+							<span>Extracted Frames</span>
+							<span class="text-xs font-semibold bg-zinc-100 text-zinc-800 border border-zinc-200 px-2.5 py-0.5 rounded-full" x-text="frames.length + ' frames'"></span>
+						</h2>
+						<p class="text-xs text-zinc-500 mt-0.5">
+							Format: <strong class="uppercase text-zinc-700" x-text="targetFormat"></strong> · Total size: <strong class="text-zinc-700" x-text="formatSize(totalFramesSize)"></strong>
+						</p>
+					</div>
+
+					<div class="flex flex-wrap items-center gap-2.5">
+						<!-- Download All as ZIP -->
+						<button
+							@click="downloadZip()"
+							:disabled="isZipping"
+							class="bg-zinc-900 hover:bg-zinc-800 text-white text-xs font-semibold px-4 py-2 rounded-xl transition-all flex items-center gap-2 shadow-sm disabled:opacity-50"
+						>
+							<template x-if="!isZipping">
+								<span class="flex items-center gap-1.5">
+									<svg xmlns="http://www.w3.org/2000/svg" class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+									Download All (ZIP)
+								</span>
+							</template>
+							<template x-if="isZipping">
+								<span class="flex items-center gap-1.5">
+									<svg class="animate-spin w-3.5 h-3.5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+									<span x-text="zipProgressText"></span>
+								</span>
+							</template>
+						</button>
+
+						<!-- Download Separately -->
+						<button
+							@click="downloadAllSequential()"
+							class="border border-zinc-300 hover:bg-zinc-50 text-zinc-700 text-xs font-semibold px-3 py-2 rounded-xl transition-all flex items-center gap-1.5"
+							title="Download images individually"
+						>
+							<svg xmlns="http://www.w3.org/2000/svg" class="w-3.5 h-3.5 text-zinc-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="8 17 12 21 16 17"/><line x1="12" y1="12" x2="12" y2="21"/><path d="M20.88 18.09A5 5 0 0 0 18 9h-1.26A8 8 0 1 0 3 16.29"/></svg>
+							Download All (Files)
+						</button>
+
+						<!-- Clear All -->
+						<button
+							@click="clearFrames()"
+							class="text-xs text-zinc-400 hover:text-red-500 transition-colors px-2 py-1"
+						>
+							Clear Frames
+						</button>
+					</div>
+				</div>
+
+				<!-- Frame Grid -->
+				<div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3.5">
+					<template x-for="(frame, index) in frames" :key="frame.id">
+						<div class="bg-white border border-zinc-200 rounded-xl overflow-hidden shadow-sm hover:shadow-md transition-all group flex flex-col">
+							
+							<!-- Thumbnail container with checkerboard background for transparent formats -->
+							<div
+								class="relative aspect-video bg-zinc-100 flex items-center justify-center overflow-hidden cursor-pointer"
+								style="background-image: linear-gradient(45deg, #e4e4e7 25%, transparent 25%), linear-gradient(-45deg, #e4e4e7 25%, transparent 25%), linear-gradient(45deg, transparent 75%, #e4e4e7 75%), linear-gradient(-45deg, transparent 75%, #e4e4e7 75%); background-size: 8px 8px; background-position: 0 0, 0 4px, 4px -4px, -4px 0px;"
+								@click="openModal(index)"
+							>
+								<img :src="frame.dataUrl" class="w-full h-full object-contain group-hover:scale-105 transition-transform duration-200" :alt="frame.filename" loading="lazy" />
+								
+								<!-- Timestamp badge -->
+								<div class="absolute top-1.5 left-1.5 bg-black/70 backdrop-blur-xs text-white text-[10px] font-mono px-1.5 py-0.5 rounded shadow">
+									<span x-text="formatDuration(frame.timestamp, true)"></span>
+								</div>
+
+								<!-- Frame # badge -->
+								<div class="absolute top-1.5 right-1.5 bg-white/90 backdrop-blur-xs text-zinc-800 text-[10px] font-bold px-1.5 py-0.5 rounded shadow">
+									#<span x-text="index + 1"></span>
+								</div>
+
+								<!-- Hover Overlay with Zoom Icon -->
+								<div class="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+									<span class="p-1.5 bg-white/90 rounded-full text-zinc-900 shadow">
+										<svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/><line x1="11" y1="8" x2="11" y2="14"/><line x1="8" y1="11" x2="14" y2="11"/></svg>
+									</span>
+								</div>
+							</div>
+
+							<!-- Card Footer / Actions -->
+							<div class="p-2.5 flex-1 flex flex-col justify-between bg-white border-t border-zinc-100">
+								<div class="flex items-center justify-between text-[11px] text-zinc-500 mb-2">
+									<span class="font-mono text-zinc-400" x-text="frame.width + '×' + frame.height"></span>
+									<span class="font-medium" x-text="formatSize(frame.size)"></span>
+								</div>
+
+								<div class="flex items-center gap-1">
+									<!-- Download -->
+									<button
+										@click.stop="downloadSingle(frame)"
+										class="flex-1 bg-zinc-900 hover:bg-zinc-800 text-white text-[11px] font-semibold py-1 px-2 rounded-lg transition-colors flex items-center justify-center gap-1"
+										title="Download image"
+									>
+										<svg xmlns="http://www.w3.org/2000/svg" class="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+										Save
+									</button>
+
+									<!-- Copy to Clipboard -->
+									<button
+										@click.stop="copyToClipboard(frame)"
+										class="p-1 text-zinc-500 hover:text-zinc-900 hover:bg-zinc-100 rounded-lg transition-colors border border-zinc-200"
+										title="Copy frame to clipboard"
+									>
+										<svg xmlns="http://www.w3.org/2000/svg" class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+									</button>
+
+									<!-- Delete -->
+									<button
+										@click.stop="removeFrame(index)"
+										class="p-1 text-zinc-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
+										title="Remove frame"
+									>
+										<svg xmlns="http://www.w3.org/2000/svg" class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18M6 6l12 12"/></svg>
+									</button>
+								</div>
+							</div>
+
+						</div>
+					</template>
+				</div>
+			</div>
+
+		</div>
+
+		<!-- Full Size Image Lightbox Modal -->
+		<div
+			x-show="modalOpen"
+			style="display: none;"
+			class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm"
+			@keydown.window.escape="modalOpen = false"
+			@keydown.window.arrow-left="prevModalImage()"
+			@keydown.window.arrow-right="nextModalImage()"
+		>
+			<div class="relative bg-white rounded-2xl max-w-4xl w-full max-h-[90vh] overflow-hidden flex flex-col shadow-2xl" @click.outside="modalOpen = false">
+				
+				<!-- Modal Header -->
+				<div class="px-5 py-3 border-b border-zinc-200 flex items-center justify-between bg-zinc-50">
+					<div class="flex items-center gap-2">
+						<span class="text-sm font-bold text-zinc-800" x-text="`Frame #${activeModalIndex + 1} of ${frames.length}`"></span>
+						<span class="text-xs font-mono bg-zinc-200 text-zinc-700 px-2 py-0.5 rounded" x-text="formatDuration(activeModalFrame?.timestamp || 0, true)"></span>
+						<span class="text-xs text-zinc-500" x-text="`${activeModalFrame?.width}×${activeModalFrame?.height} px · ${formatSize(activeModalFrame?.size || 0)}`"></span>
+					</div>
+					<button @click="modalOpen = false" class="p-1 text-zinc-400 hover:text-zinc-700 rounded-lg">
+						<svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18M6 6l12 12"/></svg>
+					</button>
+				</div>
+
+				<!-- Modal Body / Image -->
+				<div class="flex-1 overflow-auto p-4 flex items-center justify-center bg-zinc-950 min-h-[300px]">
+					<template x-if="activeModalFrame">
+						<img :src="activeModalFrame.dataUrl" class="max-w-full max-h-[65vh] object-contain shadow-lg" :alt="activeModalFrame.filename" />
+					</template>
+				</div>
+
+				<!-- Modal Footer -->
+				<div class="px-5 py-3 border-t border-zinc-200 flex items-center justify-between bg-white">
+					<div class="flex items-center gap-2">
+						<button
+							@click="prevModalImage()"
+							:disabled="activeModalIndex <= 0"
+							class="px-3 py-1.5 text-xs font-semibold border border-zinc-200 rounded-lg hover:bg-zinc-50 disabled:opacity-30 disabled:cursor-not-allowed flex items-center gap-1"
+						>
+							<svg xmlns="http://www.w3.org/2000/svg" class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+							Previous
+						</button>
+						<button
+							@click="nextModalImage()"
+							:disabled="activeModalIndex >= frames.length - 1"
+							class="px-3 py-1.5 text-xs font-semibold border border-zinc-200 rounded-lg hover:bg-zinc-50 disabled:opacity-30 disabled:cursor-not-allowed flex items-center gap-1"
+						>
+							Next
+							<svg xmlns="http://www.w3.org/2000/svg" class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+						</button>
+					</div>
+
+					<div class="flex items-center gap-2">
+						<button
+							@click="copyToClipboard(activeModalFrame)"
+							class="px-3 py-1.5 text-xs font-semibold border border-zinc-200 hover:bg-zinc-50 text-zinc-700 rounded-lg flex items-center gap-1.5"
+						>
+							<svg xmlns="http://www.w3.org/2000/svg" class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+							Copy
+						</button>
+						<button
+							@click="downloadSingle(activeModalFrame)"
+							class="bg-zinc-900 hover:bg-zinc-800 text-white px-4 py-1.5 text-xs font-semibold rounded-lg flex items-center gap-1.5"
+						>
+							<svg xmlns="http://www.w3.org/2000/svg" class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+							Download
+						</button>
+					</div>
+				</div>
+
+			</div>
+		</div>
+
+		<!-- Toast Notification -->
+		<div
+			x-show="toastMessage"
+			x-transition
+			style="display: none;"
+			class="fixed bottom-6 right-6 z-50 bg-zinc-900 text-white text-xs font-semibold px-4 py-2.5 rounded-xl shadow-xl flex items-center gap-2 border border-zinc-700"
+		>
+			<svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 text-emerald-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+			<span x-text="toastMessage"></span>
+		</div>
+
+		<!-- Hidden Elements for Background Extraction -->
+		<video id="hiddenExtractVideo" preload="auto" muted playsinline style="display:none;"></video>
+		<canvas id="extractCanvas" style="display:none;"></canvas>
+	</div>
+
+	<script is:inline>
+	window.__jszipLoaded = new Promise((resolve, reject) => {
+		const s = document.createElement('script');
+		s.src = 'https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js';
+		s.onload = resolve;
+		s.onerror = reject;
+		document.head.appendChild(s);
+	});
+
+	document.addEventListener('alpine:init', () => {
+		Alpine.data('videoToFramesApp', () => ({
+			videoFile: null,
+			videoSrc: '',
+			duration: 0,
+			videoWidth: 0,
+			videoHeight: 0,
+			currentVideoTime: 0,
+			isDragging: false,
+
+			// Extraction Settings
+			mode: 'interval', // interval | total | fps
+			intervalSeconds: 1,
+			totalFramesCount: 10,
+			fpsRate: 1,
+
+			useFullVideo: true,
+			startTime: 0,
+			endTime: 0,
+
+			// Format settings
+			targetFormat: 'webp',
+			quality: 0.92,
+			scalePreset: '1',
+
+			formats: [
+				{ value: 'webp', label: 'WEBP', note: 'Recommended' },
+				{ value: 'png',  label: 'PNG',  note: 'Lossless' },
+				{ value: 'jpg',  label: 'JPG',  note: 'Compact' },
+				{ value: 'bmp',  label: 'BMP',  note: 'Raw' },
+			],
+
+			// Processing state
+			isExtracting: false,
+			isCancelled: false,
+			progressPercent: 0,
+			progressText: '',
+
+			// Extracted frames
+			frames: [],
+			isZipping: false,
+			zipProgressText: '',
+
+			// Lightbox modal state
+			modalOpen: false,
+			activeModalIndex: 0,
+
+			// Toast message
+			toastMessage: '',
+			toastTimer: null,
+
+			get isLossy() {
+				return ['webp', 'jpg'].includes(this.targetFormat);
+			},
+
+			get totalFramesSize() {
+				return this.frames.reduce((acc, f) => acc + (f.size || 0), 0);
+			},
+
+			get activeModalFrame() {
+				return this.frames[this.activeModalIndex] || null;
+			},
+
+			get effectiveRange() {
+				const start = this.useFullVideo ? 0 : Math.max(0, this.startTime);
+				const end = this.useFullVideo ? this.duration : Math.min(this.duration, Math.max(start + 0.01, this.endTime));
+				return { start, end, range: Math.max(0.01, end - start) };
+			},
+
+			get estimatedFramesCount() {
+				if (this.duration <= 0) return 0;
+				const { range } = this.effectiveRange;
+				if (this.mode === 'interval') {
+					const step = Math.max(0.05, this.intervalSeconds);
+					return Math.max(1, Math.floor(range / step) + 1);
+				}
+				if (this.mode === 'total') {
+					return Math.max(1, this.totalFramesCount);
+				}
+				if (this.mode === 'fps') {
+					const fps = Math.max(0.1, this.fpsRate);
+					return Math.max(1, Math.floor(range * fps) + 1);
+				}
+				return 0;
+			},
+
+			init() {
+				this.$watch('duration', (val) => {
+					if (val > 0) {
+						this.endTime = parseFloat(val.toFixed(2));
+					}
+				});
+			},
+
+			showToast(msg) {
+				this.toastMessage = msg;
+				clearTimeout(this.toastTimer);
+				this.toastTimer = setTimeout(() => {
+					this.toastMessage = '';
+				}, 2500);
+			},
+
+			onFileChange(e) {
+				const file = e.target.files[0];
+				if (file) this.loadVideo(file);
+				e.target.value = '';
+			},
+
+			onDrop(e) {
+				this.isDragging = false;
+				const file = [...e.dataTransfer.files].find(f => f.type.startsWith('video/'));
+				if (file) this.loadVideo(file);
+			},
+
+			loadVideo(file) {
+				if (this.videoSrc) {
+					URL.revokeObjectURL(this.videoSrc);
+				}
+				this.videoFile = file;
+				this.videoSrc = URL.createObjectURL(file);
+				this.frames = [];
+				this.currentVideoTime = 0;
+
+				const hiddenVid = document.getElementById('hiddenExtractVideo');
+				hiddenVid.src = this.videoSrc;
+				hiddenVid.onloadedmetadata = () => {
+					this.duration = hiddenVid.duration;
+					this.videoWidth = hiddenVid.videoWidth;
+					this.videoHeight = hiddenVid.videoHeight;
+					this.startTime = 0;
+					this.endTime = parseFloat(hiddenVid.duration.toFixed(2));
+					this.useFullVideo = true;
+				};
+			},
+
+			clearVideo() {
+				if (this.videoSrc) {
+					URL.revokeObjectURL(this.videoSrc);
+				}
+				this.videoFile = null;
+				this.videoSrc = '';
+				this.duration = 0;
+				this.videoWidth = 0;
+				this.videoHeight = 0;
+				this.frames = [];
+				this.isExtracting = false;
+			},
+
+			onMainVideoTimeUpdate() {
+				const video = this.$refs.mainVideo;
+				if (video) {
+					this.currentVideoTime = video.currentTime;
+				}
+			},
+
+			formatDuration(seconds, withMs = false) {
+				if (isNaN(seconds) || seconds < 0) seconds = 0;
+				const mins = Math.floor(seconds / 60);
+				const secs = Math.floor(seconds % 60);
+				const ms = Math.floor((seconds % 1) * 100);
+				const mStr = String(mins).padStart(2, '0');
+				const sStr = String(secs).padStart(2, '0');
+				if (withMs) {
+					const msStr = String(ms).padStart(2, '0');
+					return `${mStr}:${sStr}.${msStr}`;
+				}
+				return `${mStr}:${sStr}`;
+			},
+
+			formatSize(bytes) {
+				if (!bytes || bytes <= 0) return '0 B';
+				if (bytes < 1024) return bytes + ' B';
+				if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+				return (bytes / (1024 * 1024)).toFixed(2) + ' MB';
+			},
+
+			getMime() {
+				const map = {
+					webp: 'image/webp',
+					png:  'image/png',
+					jpg:  'image/jpeg',
+					bmp:  'image/bmp'
+				};
+				return map[this.targetFormat] || 'image/webp';
+			},
+
+			getExt() {
+				return this.targetFormat === 'jpg' ? 'jpg' : this.targetFormat;
+			},
+
+			// Extract single snapshot from current main video player position
+			captureCurrentFrame() {
+				const mainVideo = this.$refs.mainVideo;
+				if (!mainVideo) return;
+
+				const canvas = document.getElementById('extractCanvas');
+				const ctx = canvas.getContext('2d');
+
+				const scale = parseFloat(this.scalePreset);
+				const targetW = Math.round(this.videoWidth * scale);
+				const targetH = Math.round(this.videoHeight * scale);
+
+				canvas.width = targetW;
+				canvas.height = targetH;
+				ctx.drawImage(mainVideo, 0, 0, targetW, targetH);
+
+				const mime = this.getMime();
+				const q = this.isLossy ? this.quality : undefined;
+				const dataUrl = canvas.toDataURL(mime, q);
+				const b64 = dataUrl.split(',')[1] || '';
+				const size = Math.round(b64.length * 0.75);
+
+				const baseName = (this.videoFile?.name || 'video').replace(/\.[^/.]+$/, '');
+				const tStr = this.formatDuration(mainVideo.currentTime, true).replace(':', '-').replace('.', '_');
+				const ext = this.getExt();
+				const filename = `${baseName}_snap_${tStr}.${ext}`;
+
+				this.frames.unshift({
+					id: Date.now() + Math.random(),
+					dataUrl,
+					timestamp: mainVideo.currentTime,
+					width: targetW,
+					height: targetH,
+					size,
+					filename
+				});
+
+				this.showToast('Snapshot captured!');
+			},
+
+			// Main batch extraction routine
+			async startExtraction() {
+				if (this.isExtracting || this.duration <= 0) return;
+
+				this.isExtracting = true;
+				this.isCancelled = false;
+				this.progressPercent = 0;
+				this.progressText = 'Preparing frames...';
+
+				const timestamps = this.generateTimestamps();
+				const total = timestamps.length;
+				if (total === 0) {
+					this.isExtracting = false;
+					return;
+				}
+
+				const hiddenVid = document.getElementById('hiddenExtractVideo');
+				const canvas = document.getElementById('extractCanvas');
+				const ctx = canvas.getContext('2d');
+
+				const scale = parseFloat(this.scalePreset);
+				const targetW = Math.round(this.videoWidth * scale);
+				const targetH = Math.round(this.videoHeight * scale);
+
+				canvas.width = targetW;
+				canvas.height = targetH;
+
+				const baseName = (this.videoFile?.name || 'video').replace(/\.[^/.]+$/, '');
+				const ext = this.getExt();
+				const mime = this.getMime();
+				const q = this.isLossy ? this.quality : undefined;
+
+				const newFrames = [];
+
+				for (let i = 0; i < total; i++) {
+					if (this.isCancelled) break;
+
+					const t = timestamps[i];
+					this.progressPercent = ((i) / total) * 100;
+					this.progressText = `Extracting frame ${i + 1} of ${total} (${this.formatDuration(t, true)})...`;
+
+					// Seek video to timestamp t and wait for seeked event
+					await this.seekVideoToTime(hiddenVid, t);
+
+					ctx.drawImage(hiddenVid, 0, 0, targetW, targetH);
+					const dataUrl = canvas.toDataURL(mime, q);
+					const b64 = dataUrl.split(',')[1] || '';
+					const size = Math.round(b64.length * 0.75);
+
+					const idxStr = String(i + 1).padStart(3, '0');
+					const tStr = this.formatDuration(t, true).replace(':', '-').replace('.', '_');
+					const filename = `${baseName}_frame_${idxStr}_${tStr}.${ext}`;
+
+					newFrames.push({
+						id: Date.now() + Math.random() + i,
+						dataUrl,
+						timestamp: t,
+						width: targetW,
+						height: targetH,
+						size,
+						filename
+					});
+				}
+
+				this.frames = newFrames;
+				this.progressPercent = 100;
+				this.progressText = 'Done!';
+				this.isExtracting = false;
+				this.showToast(`Extracted ${this.frames.length} frames!`);
+			},
+
+			generateTimestamps() {
+				const { start, end, range } = this.effectiveRange;
+				const list = [];
+
+				if (this.mode === 'interval') {
+					const step = Math.max(0.05, this.intervalSeconds);
+					for (let t = start; t <= end + 0.001; t += step) {
+						list.push(Math.min(end, parseFloat(t.toFixed(3))));
+					}
+				} else if (this.mode === 'total') {
+					const count = Math.max(1, this.totalFramesCount);
+					if (count === 1) {
+						list.push(start);
+					} else {
+						const step = range / (count - 1);
+						for (let i = 0; i < count; i++) {
+							const t = start + (i * step);
+							list.push(Math.min(end, parseFloat(t.toFixed(3))));
+						}
+					}
+				} else if (this.mode === 'fps') {
+					const fps = Math.max(0.1, this.fpsRate);
+					const step = 1 / fps;
+					for (let t = start; t <= end + 0.001; t += step) {
+						list.push(Math.min(end, parseFloat(t.toFixed(3))));
+					}
+				}
+
+				return list;
+			},
+
+			seekVideoToTime(video, time) {
+				return new Promise((resolve) => {
+					let resolved = false;
+					const onSeeked = () => {
+						if (!resolved) {
+							resolved = true;
+							video.removeEventListener('seeked', onSeeked);
+							resolve();
+						}
+					};
+
+					video.addEventListener('seeked', onSeeked, { once: true });
+					video.currentTime = time;
+
+					// Safety timeout in case seeked doesn't fire
+					setTimeout(() => {
+						if (!resolved) {
+							resolved = true;
+							video.removeEventListener('seeked', onSeeked);
+							resolve();
+						}
+					}, 800);
+				});
+			},
+
+			cancelExtraction() {
+				this.isCancelled = true;
+				this.isExtracting = false;
+				this.progressText = 'Extraction cancelled.';
+			},
+
+			removeFrame(index) {
+				this.frames.splice(index, 1);
+			},
+
+			clearFrames() {
+				this.frames = [];
+			},
+
+			downloadSingle(frame) {
+				if (!frame) return;
+				const a = document.createElement('a');
+				a.href = frame.dataUrl;
+				a.download = frame.filename;
+				a.click();
+			},
+
+			async copyToClipboard(frame) {
+				if (!frame) return;
+				try {
+					// Browsers require image/png blob for ClipboardItem
+					const img = new Image();
+					img.onload = () => {
+						const canvas = document.createElement('canvas');
+						canvas.width = frame.width;
+						canvas.height = frame.height;
+						const ctx = canvas.getContext('2d');
+						ctx.drawImage(img, 0, 0);
+						canvas.toBlob((blob) => {
+							if (blob) {
+								navigator.clipboard.write([
+									new ClipboardItem({ 'image/png': blob })
+								]).then(() => {
+									this.showToast('Copied frame to clipboard!');
+								}).catch(() => {
+									this.showToast('Could not copy image');
+								});
+							}
+						}, 'image/png');
+					};
+					img.src = frame.dataUrl;
+				} catch (e) {
+					console.error('Clipboard copy failed:', e);
+					this.showToast('Clipboard copy not supported');
+				}
+			},
+
+			async downloadZip() {
+				if (this.frames.length === 0 || this.isZipping) return;
+				this.isZipping = true;
+				this.zipProgressText = 'Loading ZIP tool...';
+
+				try {
+					await window.__jszipLoaded;
+					const zip = new JSZip();
+					const baseName = (this.videoFile?.name || 'video').replace(/\.[^/.]+$/, '');
+					const folder = zip.folder(`${baseName}-frames`) || zip;
+
+					this.zipProgressText = 'Packing frames (0%)...';
+
+					for (let i = 0; i < this.frames.length; i++) {
+						const f = this.frames[i];
+						const b64Data = f.dataUrl.split(',')[1];
+						folder.file(f.filename, b64Data, { base64: true });
+						this.zipProgressText = `Packing ${i + 1}/${this.frames.length}...`;
+					}
+
+					this.zipProgressText = 'Generating ZIP...';
+					const content = await zip.generateAsync({ type: 'blob' }, (metadata) => {
+						this.zipProgressText = `Compressing ${Math.round(metadata.percent)}%...`;
+					});
+
+					const url = URL.createObjectURL(content);
+					const a = document.createElement('a');
+					a.href = url;
+					a.download = `${baseName}-frames.zip`;
+					a.click();
+					URL.revokeObjectURL(url);
+					this.showToast('ZIP downloaded successfully!');
+				} catch (err) {
+					console.error('ZIP generation error:', err);
+					alert('Failed to generate ZIP archive. You can download frames separately.');
+				} finally {
+					this.isZipping = false;
+					this.zipProgressText = '';
+				}
+			},
+
+			downloadAllSequential() {
+				this.frames.forEach((frame, idx) => {
+					setTimeout(() => {
+						this.downloadSingle(frame);
+					}, idx * 150);
+				});
+				this.showToast(`Downloading ${this.frames.length} files...`);
+			},
+
+			// Modal functions
+			openModal(index) {
+				this.activeModalIndex = index;
+				this.modalOpen = true;
+			},
+
+			prevModalImage() {
+				if (this.activeModalIndex > 0) {
+					this.activeModalIndex--;
+				}
+			},
+
+			nextModalImage() {
+				if (this.activeModalIndex < this.frames.length - 1) {
+					this.activeModalIndex++;
+				}
+			}
+		}));
+	});
+	</script>
+</Layout>
