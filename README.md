@@ -24,7 +24,9 @@ A collection of fast, free, and privacy-focused developer utilities — everythi
 | **Add Watermark** | Add text or image watermarks to your photos with customizable positions |
 | **Placeholder Generator** | Generate custom placeholder mock images. Export to PNG, SVG, WEBP, or Base64 |
 | **Trim Image Padding** | Remove transparent or solid-color padding/whitespace from images with adjustable tolerance |
+| **Crop Image** | Crop images by dragging a selection box, with aspect ratio presets and live preview |
 | **Image Converter** | Convert images between JPG, PNG, WEBP, and more |
+| **Video to Frames** | Extract frames, snapshots, and image sequences from video files. Export to WEBP, PNG, JPG, or download as ZIP |
 | **Resize Image** | Resize images to specific pixel dimensions with aspect ratio lock |
 | **Scale Image** | Scale images up or down by percentage with live size preview |
 | **Grayscale Image** | Apply a black & white grayscale filter using the Luminance algorithm |
@@ -88,6 +90,7 @@ npm run preview
 | Time | [Day.js](https://day.js.org) |
 | Bcrypt | [bcryptjs](https://github.com/dcodeIO/bcrypt.js) |
 | QR/Barcode | [qrcode](https://github.com/soldair/node-qrcode), [jsQR](https://github.com/cozmo/jsQR), [JsBarcode](https://github.com/lindell/JsBarcode) |
+| ZIP Archive | [JSZip](https://stuk.github.io/jszip/) via CDN |
 
 ---
 
@@ -112,6 +115,8 @@ npm run preview
 │   │   ├── url-encode-decode.astro
 │   │   ├── image-base64.astro
 │   │   ├── image-converter.astro
+│   │   ├── video-to-frames.astro
+│   │   ├── crop-image.astro
 │   │   ├── resize-image.astro
 │   │   ├── scale-image.astro
 │   │   ├── grayscale-image.astro
