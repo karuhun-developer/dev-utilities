@@ -100,7 +100,8 @@ import Layout from '../layouts/Layout.astro';
 						emoji: '🖼️',
 						label: 'Images & Assets',
 						items: [
-							{ href: '/remove-bg',        icon: '🪄', label: 'Remove Background',    desc: 'Erase image backgrounds using AI, fully in your browser.', tags: 'ai background remove erase photo' },
+							{ href: '/remove-bg',        icon: '🪄', label: 'Remove Background',    desc: 'Erase image backgrounds using AI with WebGPU acceleration & CPU fallback.', tags: 'ai background remove erase photo' },
+							{ href: '/remove-video-bg',  icon: '🎬', label: 'Remove Video BG',      desc: 'Remove video backgrounds using AI (WebGPU required) or Chroma Key. Export transparent WebM.', tags: 'ai video background remove webgpu transparent green screen' },
 							{ href: '/image-converter',  icon: '🔄', label: 'Image Converter',       desc: 'Convert images between JPG, PNG, WEBP, BMP, ICO, GIF, and more. Batch convert multiple files.', tags: 'convert jpg png webp bmp ico gif tiff avif format batch' },
 							{ href: '/video-to-frames',  icon: '🎞️', label: 'Video to Frames',      desc: 'Extract frames, snapshots, and image sequences from video files. Export to WEBP, PNG, JPG, or download as ZIP.', tags: 'video to frames extract video image frames snapshot screenshot capture mp4 webm webp png jpg' },
 							{ href: '/resize-image',     icon: '📐', label: 'Image Resizer',         desc: 'Resize images to specific pixel dimensions with aspect ratio lock.', tags: 'resize dimensions width height' },

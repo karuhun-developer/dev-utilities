@@ -7,8 +7,24 @@ import Layout from '../layouts/Layout.astro';
 	description="Remove backgrounds from images instantly in your browser using AI. Free, secure, and fully client-side background removal."
 	keywords="remove bg, remove background, background remover online, transparent background, ai background removal, client side ai"
 >
-	<div class="max-w-6xl" x-data="removeBgApp()">
-		<h1 class="text-2xl font-bold text-zinc-900 mb-2">Remove Background</h1>
+	<div class="max-w-6xl" x-data="removeBgApp()" x-init="checkGpuSupport()">
+		<div class="flex flex-wrap items-center justify-between gap-4 mb-2">
+			<h1 class="text-2xl font-bold text-zinc-900">Remove Background</h1>
+			<div class="flex items-center gap-2">
+				<template x-if="hasWebGpu">
+					<span class="text-xs font-semibold px-2.5 py-1 bg-emerald-50 text-emerald-700 rounded-full border border-emerald-200 flex items-center gap-1.5">
+						<span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+						⚡ WebGPU Accelerated
+					</span>
+				</template>
+				<template x-if="!hasWebGpu && !isCheckingGpu">
+					<span class="text-xs font-semibold px-2.5 py-1 bg-zinc-100 text-zinc-600 rounded-full border border-zinc-200 flex items-center gap-1.5">
+						<span class="w-1.5 h-1.5 rounded-full bg-zinc-400"></span>
+						💻 CPU (WASM) Mode
+					</span>
+				</template>
+			</div>
+		</div>
 		<p class="text-zinc-600 mb-8">Erase the background from your photos using AI, completely inside your browser. No images are uploaded to any server.</p>
 
 		<!-- Info alert -->
@@ -16,9 +32,11 @@ import Layout from '../layouts/Layout.astro';
 			<svg class="h-5 w-5 text-blue-600 mt-0.5 mr-3 flex-shrink-0" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
 				<path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd" />
 			</svg>
-			<p class="text-sm">
-				<strong>Note:</strong> The first time you use this tool, the browser downloads the AI model (~10MB) and may freeze briefly while processing. This is normal — the result will appear once done.
-			</p>
+			<div class="text-sm space-y-1">
+				<p><strong>Note:</strong> The first time you use this tool, the browser downloads the AI model (~10MB) and processes locally in your browser.</p>
+				<p class="text-xs text-blue-700" x-show="hasWebGpu">⚡ <strong>WebGPU detected:</strong> Processing will be hardware-accelerated by your GPU for maximum speed.</p>
+				<p class="text-xs text-blue-700" x-show="!hasWebGpu && !isCheckingGpu">💻 <strong>WebGPU not detected:</strong> Falling back to CPU WebAssembly (WASM). Processing may take slightly longer.</p>
+			</div>
 		</div>
 
 		<div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
@@ -112,6 +130,24 @@ import Layout from '../layouts/Layout.astro';
 				isProcessing: false,
 				progressText: '',
 				selectedModel: 'isnet_quint8',
+				hasWebGpu: false,
+				isCheckingGpu: true,
+
+				async checkGpuSupport() {
+					this.isCheckingGpu = true;
+					try {
+						if (typeof navigator !== 'undefined' && 'gpu' in navigator) {
+							const adapter = await navigator.gpu.requestAdapter();
+							this.hasWebGpu = !!adapter;
+						} else {
+							this.hasWebGpu = false;
+						}
+					} catch (e) {
+						this.hasWebGpu = false;
+					} finally {
+						this.isCheckingGpu = false;
+					}
+				},
 
 				get downloadFilename() {
 					const baseName = this.originalFilename.replace(/\.[^/.]+$/, '');
@@ -153,9 +189,10 @@ import Layout from '../layouts/Layout.astro';
 						// so everything resolves correctly in the browser without a bundler
 						const { removeBackground } = await import('https://cdn.jsdelivr.net/npm/@imgly/background-removal@1.7.0/+esm');
 
-						this.progressText = 'Initializing AI...';
+						this.progressText = this.hasWebGpu ? 'Initializing AI (WebGPU)...' : 'Initializing AI (CPU)...';
 
 						const blob = await removeBackground(this.originalFileObject, {
+							device: this.hasWebGpu ? 'gpu' : 'cpu',
 							model: this.selectedModel,
 							progress: (key, current, total) => {
 								if (total > 0) {
@@ -167,7 +204,7 @@ import Layout from '../layouts/Layout.astro';
 							            this.progressText = `Loading AI model: ${pct}%`; 
 							        } else if (key.includes('compute')) {
 							            // 'compute' means the model is loaded and is currently processing the image
-							            this.progressText = `Processing image: ${pct}%`;
+							            this.progressText = `Processing image (${this.hasWebGpu ? 'WebGPU' : 'CPU'}): ${pct}%`;
 							        } else {
 							            // Default text for other processes
 							            this.progressText = `Processing: ${pct}%`;

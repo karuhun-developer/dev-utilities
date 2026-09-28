@@ -30,7 +30,8 @@ A collection of fast, free, and privacy-focused developer utilities — everythi
 | **Resize Image** | Resize images to specific pixel dimensions with aspect ratio lock |
 | **Scale Image** | Scale images up or down by percentage with live size preview |
 | **Grayscale Image** | Apply a black & white grayscale filter using the Luminance algorithm |
-| **Remove Background** | AI-powered background removal using ONNX in-browser (no upload) |
+| **Remove Background** | AI-powered image background removal with WebGPU acceleration & CPU (WASM) fallback |
+| **Remove Video BG** | Client-side video background removal using AI (WebGPU required) or Chroma Key (Green Screen) |
 | **Text Template Editor** | Create reusable text templates with `[variable]` placeholders, saved to localStorage |
 | **QR Code Generator** | Generate QR codes from text/URL with custom size & colors |
 | **QR Code Reader** | Scan and decode QR codes from image uploads or live camera |
@@ -85,7 +86,8 @@ npm run preview
 | Styling | [Tailwind CSS](https://tailwindcss.com) v4 |
 | Reactivity | [Alpine.js](https://alpinejs.dev) v3 |
 | PWA | [@vite-pwa/astro](https://vite-pwa-org.netlify.app) |
-| AI (Remove BG) | [@imgly/background-removal](https://img.ly/background-removal) via CDN |
+| AI (Image BG) | [@imgly/background-removal](https://img.ly/background-removal) via CDN (WebGPU + WASM fallback) |
+| AI (Video BG) | WebGPU-accelerated Matting + Canvas Chroma Key + MediaRecorder (VP9 Alpha) |
 | CSV parsing | [PapaParse](https://www.papaparse.com) |
 | Time | [Day.js](https://day.js.org) |
 | Bcrypt | [bcryptjs](https://github.com/dcodeIO/bcrypt.js) |
