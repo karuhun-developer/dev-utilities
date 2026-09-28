@@ -692,6 +692,16 @@ import Layout from '../layouts/Layout.astro';
 					}
 				},
 
+				// Helper to convert canvas frame to Blob for AI input
+				canvasToBlob(canvas, mime = 'image/jpeg', quality = 0.85) {
+					return new Promise((resolve, reject) => {
+						canvas.toBlob((b) => {
+							if (b) resolve(b);
+							else reject(new Error('Failed to capture canvas frame blob'));
+						}, mime, quality);
+					});
+				},
+
 				// Main video processing routine
 				async startProcessing() {
 					if (!this.videoFile || this.isProcessing) return;
@@ -734,12 +744,20 @@ import Layout from '../layouts/Layout.astro';
 						const srcCtx = srcCanvas.getContext('2d', { willReadFrequently: true });
 						const outCtx = outCanvas.getContext('2d', { willReadFrequently: true });
 
-						// Pre-load AI library if AI mode
+						// Pre-load AI library & model if AI mode
 						let aiRemoveBackground = null;
 						if (this.removalMode === 'ai') {
 							this.progressText = 'Loading AI model with WebGPU...';
-							const imgly = await import('https://cdn.jsdelivr.net/npm/@imgly/background-removal@1.7.0/+esm');
-							aiRemoveBackground = imgly.removeBackground;
+							const { removeBackground, preload } = await import('https://cdn.jsdelivr.net/npm/@imgly/background-removal@1.7.0/+esm');
+							aiRemoveBackground = removeBackground;
+							try {
+								await preload({
+									device: 'gpu',
+									model: 'isnet_quint8'
+								});
+							} catch (preloadErr) {
+								console.warn('Preload notice:', preloadErr);
+							}
 						}
 
 						// Setup MediaRecorder from outCanvas stream
@@ -799,22 +817,32 @@ import Layout from '../layouts/Layout.astro';
 								const imgData = srcCtx.getImageData(0, 0, width, height);
 								this.applyChromaKey(imgData, keyRgb, this.chromaTolerance, this.chromaFeather);
 								
-								// Put masked foreground onto an offscreen canvas or temporary canvas
+								// Put masked foreground onto canvas
 								srcCtx.putImageData(imgData, 0, 0);
 								outCtx.drawImage(srcCanvas, 0, 0);
 							} else if (this.removalMode === 'ai' && aiRemoveBackground) {
+								// Convert source canvas frame to JPEG Blob (fast & compatible with imgly decoder)
+								const frameBlob = await this.canvasToBlob(srcCanvas, 'image/jpeg', 0.85);
+
 								// WebGPU AI Matting
-								const blob = await aiRemoveBackground(srcCanvas, {
+								const blob = await aiRemoveBackground(frameBlob, {
 									device: 'gpu',
 									model: 'isnet_quint8',
 									output: { format: 'image/png' }
 								});
 								const imgBitmap = await createImageBitmap(blob);
 								outCtx.drawImage(imgBitmap, 0, 0, width, height);
+								imgBitmap.close(); // Clean up GPU memory immediately
 							}
 
-							// Brief yield to allow browser UI & MediaRecorder to capture stream
-							await new Promise((r) => setTimeout(r, 10));
+							// Trigger canvas stream frame capture if available
+							const track = stream.getVideoTracks()[0];
+							if (track && typeof track.requestFrame === 'function') {
+								track.requestFrame();
+							}
+
+							// Yield to allow browser UI & MediaRecorder to capture frame cleanly
+							await new Promise((r) => setTimeout(r, Math.max(15, Math.floor(1000 / fps))));
 						}
 
 						if (!this.isCancelled) {
