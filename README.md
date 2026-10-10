@@ -37,6 +37,7 @@ A collection of fast, free, and privacy-focused developer utilities — everythi
 | **QR Code Reader** | Scan and decode QR codes from image uploads or live camera |
 | **Barcode Generator** | Generate CODE128, EAN, UPC, and other barcodes. Download as PNG/SVG |
 | **Word Counter** | Count words, characters (with/without spaces), sentences, paragraphs, lines, unique words, and estimate reading & speaking time |
+| **Audio to SRT** | Generate timed subtitles from one audio file with local Whisper AI, edit the text, and download SRT |
 
 ---
 
@@ -88,6 +89,7 @@ npm run preview
 | PWA | [@vite-pwa/astro](https://vite-pwa-org.netlify.app) |
 | AI (Image BG) | [@imgly/background-removal](https://img.ly/background-removal) via CDN (WebGPU + WASM fallback) |
 | AI (Video BG) | WebGPU-accelerated Matting + Canvas Chroma Key + MediaRecorder (VP9 Alpha) |
+| AI (Audio to SRT) | Transformers.js v4 + multilingual Whisper Tiny/Base in a Web Worker (WebGPU + WASM fallback) |
 | CSV parsing | [PapaParse](https://www.papaparse.com) |
 | Time | [Day.js](https://day.js.org) |
 | Bcrypt | [bcryptjs](https://github.com/dcodeIO/bcrypt.js) |
@@ -128,11 +130,18 @@ npm run preview
 │   │   ├── qr-reader.astro
 │   │   ├── barcode-generator.astro
 │   │   ├── word-counter.astro
+│   │   ├── audio-to-srt.astro
 │   │   ├── trim-image.astro
 │   │   ├── image-to-svg.astro
 │   │   ├── merge-images.astro
 │   │   ├── add-watermark.astro
 │   │   └── placeholder-generator.astro
+│   ├── lib/
+│   │   └── audio-to-srt.ts    # Model configuration, subtitle timings, SRT export
+│   ├── scripts/
+│   │   └── audio-to-srt.ts    # Audio decoding and editor state
+│   ├── workers/
+│   │   └── audio-to-srt.worker.ts # Local Whisper inference
 │   └── styles/
 │       └── global.css
 ├── astro.config.mjs
@@ -144,6 +153,19 @@ npm run preview
 ## 🔒 Privacy
 
 All tools process data **entirely in the browser**. No files, text, or any user data is sent to any server. The Remove Background tool downloads AI model files (~10MB) directly from the library's CDN on first use, then caches them in your browser.
+
+Audio to SRT also keeps the audio and transcript on your device. On first use, it downloads pinned public Whisper model files from Hugging Face and the ONNX runtime from its CDN; these requests do not contain your audio. Models and runtime are cached when the browser supports it. Reuse depends on the files remaining in the cache; a new model or processing backend can require another download. No transcription server, API key, or paid API is used.
+
+### Audio to SRT
+
+- Open `/audio-to-srt`, choose one audio file, select the model and spoken language, then transcribe. Review each subtitle segment and download `<audio-name>.srt`. Empty segments are omitted from export.
+- **Whisper Tiny** is the faster default; **Whisper Base** is available for higher quality. Both are multilingual, with auto detection or manual language selection, and preserve the spoken language.
+- Approximate model-file sizes (excluding runtime): Tiny **40 MB CPU / 120 MB GPU**; Base **77 MB CPU / 206 MB GPU**. Transfer sizes can vary. WebGPU and CPU use different model variants.
+- Use a modern browser supporting Web Workers, Web Audio, and WebAssembly. WebGPU accelerates compatible devices; GPU failures retry through CPU/WASM. CPU mode works without production cross-origin isolation headers.
+- MP3, WAV, M4A, FLAC, OGG, and other audio formats depend on your browser's codec support. Unsupported audio shows a decoding error; converting it to WAV or MP3 can help.
+- Long audio is processed in overlapping chunks, but the file is decoded into memory first. Large files and slower devices need more memory and time. Cancel stops the worker; completed cached downloads are retained.
+- AI subtitles may contain mistakes, especially with noise, silence, or mixed languages. Review before use. This version edits subtitle text and exports SRT; video input, translation, timing editing, and other export formats are outside its scope.
+- Run `npm run test:audio-to-srt` (requires Bun) for subtitle normalization and SRT formatting tests.
 
 ---
 

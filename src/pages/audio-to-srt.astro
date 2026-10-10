@@ -1,0 +1,125 @@
+---
+import Layout from '../layouts/Layout.astro';
+import { LANGUAGES } from '../lib/audio-to-srt';
+---
+
+<Layout
+  title="Audio to SRT"
+  description="Turn audio into editable SRT subtitles with Whisper AI, directly in your browser. Free local transcription with no audio uploads."
+  keywords="audio to srt, audio subtitles, speech to text, whisper, local transcription, subtitle generator"
+>
+  <div class="max-w-5xl" x-data="audioToSrtApp">
+    <div class="flex flex-wrap items-center justify-between gap-3 mb-2">
+      <h1 class="text-2xl font-bold text-zinc-900">Audio to SRT</h1>
+      <span class="inline-flex items-center gap-1.5 rounded-full bg-zinc-100 px-3 py-1 text-xs font-medium text-zinc-600">
+        <svg class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><rect x="4" y="10" width="16" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg>
+        Processed on your device
+      </span>
+    </div>
+    <p class="text-zinc-600 mb-6">Turn spoken audio into subtitles. Review the text, then download an SRT file.</p>
+
+    <div class="rounded-lg border border-zinc-200 bg-zinc-50 p-4 mb-7 text-sm text-zinc-600 space-y-1">
+      <p><strong class="text-zinc-800">Your audio stays here.</strong> Whisper runs in your browser. No account or paid API is needed.</p>
+      <p>The first transcription downloads the AI model and runtime. Cached files can be reused while they remain in your browser.</p>
+    </div>
+    <noscript><p class="mb-6 text-sm text-zinc-700">Enable JavaScript to transcribe audio locally.</p></noscript>
+
+    <div class="grid grid-cols-1 xl:grid-cols-[minmax(0,0.85fr)_minmax(0,1.15fr)] gap-6 items-start">
+      <section class="min-w-0 space-y-5" aria-labelledby="audio-input-heading">
+        <h2 id="audio-input-heading" class="text-sm font-semibold text-zinc-900">1. Choose your audio</h2>
+        <label
+          for="audio-file"
+          class="relative flex flex-col items-center justify-center border-2 border-dashed rounded-xl p-7 text-center transition-colors focus-within:ring-2 focus-within:ring-zinc-500 focus-within:ring-offset-2"
+          :class="isBusy ? 'opacity-60 cursor-not-allowed border-zinc-200 bg-zinc-50' : isDragging ? 'border-zinc-500 bg-zinc-100 cursor-pointer' : 'border-zinc-300 bg-zinc-50 hover:bg-zinc-100 hover:border-zinc-400 cursor-pointer'"
+          @dragover.prevent="if (!isBusy) isDragging = true"
+          @dragleave.prevent="isDragging = false"
+          @drop.prevent="onDrop($event)"
+        >
+          <svg class="w-9 h-9 text-zinc-400 mb-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 18V5l12-2v13M9 9l12-2"/><ellipse cx="6" cy="18" rx="3" ry="3"/><ellipse cx="18" cy="16" rx="3" ry="3"/></svg>
+          <span class="text-sm font-medium text-zinc-700">Drop audio here or <span class="underline underline-offset-2">browse files</span></span>
+          <span class="text-xs text-zinc-500 mt-2">MP3, WAV, M4A, FLAC, OGG and other browser-supported audio</span>
+          <input id="audio-file" type="file" accept="audio/*,.mp3,.wav,.m4a,.aac,.flac,.ogg,.opus,.aiff" class="sr-only" :disabled="isBusy" @change="handleUpload($event)" />
+        </label>
+
+        <div x-show="audioUrl" style="display:none" class="rounded-lg border border-zinc-200 p-4 space-y-3 min-w-0">
+          <div class="flex items-start justify-between gap-3">
+            <div class="min-w-0">
+              <p class="text-sm font-medium text-zinc-800 break-all" x-text="fileName"></p>
+              <p class="mt-1 text-xs text-zinc-500"><span x-text="fileSize"></span><span x-show="durationLabel"> · <span x-text="durationLabel"></span></span></p>
+            </div>
+            <button type="button" @click="reset()" :disabled="isBusy" class="shrink-0 rounded-md min-h-11 px-2 text-xs font-medium text-zinc-600 hover:bg-zinc-100 disabled:opacity-50 disabled:cursor-not-allowed focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-zinc-500">Remove</button>
+          </div>
+          <audio :src="audioUrl || null" controls preload="metadata" @loadedmetadata="readDuration($event)" class="w-full h-10" aria-label="Selected audio preview"></audio>
+        </div>
+
+        <div class="rounded-lg border border-zinc-200 p-4 space-y-4">
+          <div>
+            <label for="whisper-model" class="block text-sm font-medium text-zinc-700 mb-1.5">AI model</label>
+            <select id="whisper-model" x-model="selectedModel" :disabled="isBusy" class="w-full min-h-11 px-3 py-2 border border-zinc-300 rounded-md text-sm bg-white focus:outline-none focus:ring-2 focus:ring-zinc-400 disabled:opacity-60">
+              <option value="tiny">Whisper Tiny — faster, smaller</option>
+              <option value="base">Whisper Base — higher quality</option>
+            </select>
+            <p class="text-xs text-zinc-500 mt-2">Model files: <span x-text="modelDownload"></span>, plus runtime. GPU uses a different model variant.</p>
+          </div>
+          <div>
+            <label for="audio-language" class="block text-sm font-medium text-zinc-700 mb-1.5">Spoken language</label>
+            <select id="audio-language" x-model="selectedLanguage" :disabled="isBusy" class="w-full min-h-11 px-3 py-2 border border-zinc-300 rounded-md text-sm bg-white focus:outline-none focus:ring-2 focus:ring-zinc-400 disabled:opacity-60">
+              {Object.entries(LANGUAGES).map(([value, label]) => <option value={value}>{label}</option>)}
+            </select>
+            <p class="text-xs text-zinc-500 mt-2">Choose a language if auto detection struggles. Subtitles stay in the spoken language.</p>
+          </div>
+          <button type="button" @click="transcribe()" :disabled="!audioUrl || isBusy" class="w-full min-h-11 bg-zinc-900 text-white px-4 py-3 rounded-md text-sm font-medium hover:bg-zinc-800 disabled:opacity-50 disabled:cursor-not-allowed focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-zinc-500">
+            <span x-text="isBusy ? 'Processing…' : cues.length ? 'Transcribe again' : 'Transcribe audio'">Transcribe audio</span>
+          </button>
+        </div>
+        <p class="text-xs leading-relaxed text-zinc-500">WebGPU is used when available, with a CPU fallback. Large files need more memory and time. Clear speech gives better results; always review AI-generated subtitles.</p>
+      </section>
+
+      <section class="min-w-0" aria-labelledby="subtitle-output-heading">
+        <div class="flex items-center justify-between gap-3 mb-4">
+          <h2 id="subtitle-output-heading" class="text-sm font-semibold text-zinc-900">2. Review subtitles</h2>
+          <span x-show="backend" style="display:none" class="text-xs font-medium text-zinc-500" x-text="backend === 'webgpu' ? 'WebGPU' : 'CPU · WASM'"></span>
+        </div>
+        <div x-show="statusText" style="display:none" class="mb-4 rounded-lg border border-zinc-200 bg-zinc-50 p-4">
+          <div class="flex items-start gap-3" role="status" aria-live="polite" aria-atomic="true">
+            <svg x-show="isBusy" class="animate-spin motion-reduce:animate-none h-4 w-4 mt-0.5 shrink-0 text-zinc-500" viewBox="0 0 24 24" fill="none" aria-hidden="true"><circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="3" opacity="0.2"/><path d="M12 3a9 9 0 0 1 9 9" stroke="currentColor" stroke-width="3" stroke-linecap="round"/></svg>
+            <p class="text-sm text-zinc-700 break-words" x-text="statusText"></p>
+          </div>
+          <div x-show="stage === 'loading' && downloadFile" style="display:none" class="mt-3 space-y-2">
+            <div class="flex justify-between gap-3 text-xs text-zinc-500"><span class="break-all" x-text="downloadFile"></span><span class="shrink-0" x-text="Math.round(downloadPercent) + '%'"></span></div>
+            <progress max="100" :value="downloadPercent" class="w-full h-1.5 accent-zinc-800" aria-label="Current model file download"></progress>
+          </div>
+          <button type="button" x-show="isBusy" @click="cancel()" class="mt-3 min-h-11 px-3 py-2 rounded-md border border-zinc-300 bg-white text-xs font-medium text-zinc-700 hover:bg-zinc-100 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-zinc-500">Cancel transcription</button>
+          <p x-show="usedFallback && stage !== 'loading'" style="display:none" class="mt-2 text-xs text-zinc-500">GPU processing was unavailable, so this transcription used your CPU.</p>
+        </div>
+        <div x-show="!cues.length" class="min-h-72 rounded-lg border border-zinc-200 bg-zinc-50 flex flex-col items-center justify-center p-6 text-center">
+          <svg class="h-9 w-9 text-zinc-300 mb-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M7 10h4M7 14h4M14 10h3M14 14h3"/></svg>
+          <p class="text-sm font-medium text-zinc-600" x-text="isBusy ? 'Working on your subtitles' : 'Your subtitles will appear here'"></p>
+          <p class="text-xs text-zinc-500 mt-2 max-w-xs">Each segment includes its timing. You can correct the text before exporting.</p>
+        </div>
+        <div x-show="cues.length" style="display:none" class="rounded-lg border border-zinc-200 overflow-hidden">
+          <div class="p-4 bg-zinc-50 border-b border-zinc-200 flex flex-wrap items-center justify-between gap-3">
+            <span class="text-sm font-medium text-zinc-700" x-text="cues.length + (cues.length === 1 ? ' segment' : ' segments')"></span>
+            <button type="button" @click="download()" :disabled="!canDownload" class="min-h-11 px-4 py-2.5 bg-zinc-900 text-white rounded-md text-sm font-medium hover:bg-zinc-800 disabled:opacity-50 disabled:cursor-not-allowed focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-zinc-500">Download SRT</button>
+          </div>
+          <div class="max-h-[36rem] overflow-y-auto p-4 space-y-4" tabindex="0" role="region" aria-label="Editable subtitle segments">
+            <template x-for="(cue, index) in cues" :key="index">
+              <div>
+                <label :for="'subtitle-' + index" class="flex flex-wrap gap-x-3 gap-y-1 mb-2 text-xs text-zinc-500">
+                  <span class="font-semibold text-zinc-700" x-text="'#' + (index + 1)"></span>
+                  <span class="font-mono" x-text="formatTimestamp(cue.startMs) + ' → ' + formatTimestamp(cue.endMs)"></span>
+                </label>
+                <textarea :id="'subtitle-' + index" :aria-label="'Subtitle segment ' + (index + 1)" x-model="cue.text" rows="2" class="w-full resize-y min-h-20 px-3 py-2 border border-zinc-300 rounded-md text-sm text-zinc-800 focus:outline-none focus:ring-2 focus:ring-zinc-400"></textarea>
+              </div>
+            </template>
+          </div>
+        </div>
+      </section>
+    </div>
+  </div>
+  <script>
+    import Alpine from 'alpinejs';
+    import { createAudioToSrtApp } from '../scripts/audio-to-srt';
+    Alpine.data('audioToSrtApp', createAudioToSrtApp);
+  </script>
+</Layout>
